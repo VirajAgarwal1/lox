@@ -1,9 +1,5 @@
 package tests
 
-import (
-	"testing"
-)
+// func basic(t *testing.T) {
 
-func basic(t *testing.T) {
-
-}
+// }

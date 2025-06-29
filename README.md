@@ -1,1 +1,3 @@
-# Lox Programming Language in Golang
+# L 😉 👍
+
+# L O X

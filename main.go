@@ -1,47 +1,73 @@
+/*
+^ NOTE:
+	Currently, sourcecode of Lox only supports reading it in **UTF-8** encoding. If provided sourcecode in other encodings then the program may behave in unexpected ways..
+*/
+
 package main
 
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 
-	error_pak "github.com/VirajAgarwal1/lox/error_pak"
+	errorhandler "github.com/VirajAgarwal1/lox/errorhandler"
 )
 
-type Token struct {
-}
+const READER_BUFFER_SIZE = 4096
 
 type Lox struct {
-	source []byte
-	tokens []Token
 }
 
-func (this *Lox) RunFile(filePath string) error {
+func (program *Lox) Run(source *bufio.Reader) error {
 
-	sourceText, err := os.ReadFile(filePath)
-	if err != nil {
-		return error_pak.RetErr(err.Error(), nil)
+	for {
+		r, _, err := source.ReadRune()
+		if err != nil && err != io.EOF {
+			return errorhandler.RetErr("", err)
+		}
+		// TODO: Got each individual char, now to get tokens from them
+		fmt.Printf("%s", string(r))
+		if err == io.EOF {
+			break
+		}
 	}
-	this.source = sourceText
+	fmt.Println()
+	// TODO: Get the tokens and do something with those tokens
+	return nil
+}
+func (program *Lox) RunFile(filePath string) error {
+	fr, err := os.Open(filePath)
+	if err != nil {
+		return errorhandler.RetErr("", err)
+	}
 
-	// TODO: Add the run command here
-	fmt.Println(string(this.source))
+	buf_reader := bufio.NewReaderSize(fr, READER_BUFFER_SIZE)
+	err = program.Run(buf_reader)
+	if err != nil {
+		return errorhandler.RetErr("", err)
+	}
+
+	err = fr.Close()
+	if err != nil {
+		return errorhandler.RetErr("", err)
+	}
+
 	return nil
 }
 
-func (this *Lox) Repl() error {
-	scanner := bufio.NewScanner(os.Stdin)
+// TODO: This Repl will require some improvements since, it cannot detect when an instruction is not complete
+func (program *Lox) Repl() error {
+	input := os.Stdin
+	buf_input := bufio.NewReaderSize(input, READER_BUFFER_SIZE)
 	for {
-		fmt.Printf("[Lox]> ")
-		if !scanner.Scan() {
+		err := program.Run(buf_input)
+		if err != nil && err != io.EOF {
+			return errorhandler.RetErr("", err)
+		}
+		if err == io.EOF {
 			break
 		}
-		line := scanner.Text()
-		// TODO: Add the run command here
-		fmt.Printf("%v\n", line)
-	}
-	if err := scanner.Err(); err != nil {
-		return error_pak.RetErr("", err)
 	}
 	return nil
 }
@@ -60,13 +86,14 @@ func main() {
 		// Run in REPL mode (Read, Execute, Print, Loop)
 		err := program.Repl()
 		if err != nil {
-			fmt.Println(error_pak.RetErr("", err))
+			err = errorhandler.RetErr("", err)
+			errorhandler.ReportErr(err)
 		}
 	} else {
 		// Run the source file
 		err := program.RunFile(args[0])
 		if err != nil {
-			fmt.Println(error_pak.RetErr("", err))
+			errorhandler.ReportErr(err)
 		}
 	}
 }
