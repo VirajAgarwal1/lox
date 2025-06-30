@@ -2,7 +2,10 @@ package lexer
 
 import (
 	"bufio"
+	"fmt"
+	"io"
 
+	errorhandler "github.com/VirajAgarwal1/lox/errorhandler"
 	dfa "github.com/VirajAgarwal1/lox/lexer/dfa"
 )
 
@@ -13,15 +16,21 @@ import (
 
 type Token struct {
 	TypeOfToken dfa.TokenType
-	Line        int
-	Offset      int
+	Line        uint32
+	Offset      uint32
+}
+
+func (t *Token) SetTokenProperties(_type dfa.TokenType, _lineNum uint32, _offset uint32) {
+	t.TypeOfToken = _type
+	t.Line = _lineNum
+	t.Offset = _offset
 }
 
 type LexicalAnalyzer struct {
 	source     *bufio.Reader
 	tokenDFAa  map[dfa.TokenType]dfa.DFA
-	lineNum    int
-	lineOffset int
+	lineNum    uint32
+	lineOffset uint32
 	lexemme    []rune
 }
 
@@ -30,53 +39,92 @@ func (scanner *LexicalAnalyzer) Initialize(source *bufio.Reader) {
 	scanner.source = source
 }
 
-func rec_token_parser(scanner *LexicalAnalyzer, source *bufio.Reader, state []rune, lexemmes_to_check []bool, input rune) {
-	new_state := append(state, input)
-	next_input, _, _ := source.ReadRune() // TODO: Handle the edge cases of reading runes here
-	filtered_lexemmes_to_check := make([]bool, len(lexemmes_to_check), len(lexemmes_to_check))
-	copy(filtered_lexemmes_to_check, lexemmes_to_check)
+func (scanner *LexicalAnalyzer) ReadToken() (Token, error) {
+	// TODO: Add some way of storing the input rune (from which eveyrthing went INVALID) in state and then always start checking from that rune
+	dfaTokenResults := make(map[dfa.TokenType]dfa.DfaReturn, len(dfa.TokensList))
+	returnToken := Token{}
 
-	foundValids := make([]bool, len(lexemmes_to_check), len(lexemmes_to_check))
-	numToCheckCont := 0
+	lastLoop_isAnyValid := false
+	lastLoop_isAnyIntermediate := false
+	var lastLoop_foundValidToken dfa.TokenType
+	var lastLoop_foundIntermediateToken dfa.TokenType
 
-	for i, to_check := range filtered_lexemmes_to_check {
-		if !to_check {
-			continue
-		}
-		dfaStepResult := scanner.tokenDFAa[dfa.TokensList[i]].Step(next_input)
-		if dfaStepResult.IsInvalid() {
-			filtered_lexemmes_to_check[i] = false
-			continue
-		}
-		numToCheckCont++
-		if dfaStepResult.IsValid() {
-			foundValids[i] = true
-		}
-	}
-	if numToCheckCont == 0 {
-		return false, 
-	}
-	rec_foundValidToken,  := rec_token_parser(scanner, source, new_state, filtered_lexemmes_to_check, next_input)
-}
-
-func (scanner *LexicalAnalyzer) PipeTokens() Token {
-	// TODO: Add the scanner logic here
+	isAnyValid := false
+	isAnyIntermediate := false
+	var foundValidToken dfa.TokenType
+	var foundIntermediateToken dfa.TokenType
 	for {
 		// Read one rune from the source
+		input, _, err := scanner.source.ReadRune()
+		if err != nil && err != io.EOF {
+			return returnToken, errorhandler.RetErr("", err)
+		}
+		if err == io.EOF {
+			returnToken.SetTokenProperties(dfa.EOF, scanner.lineNum, scanner.lineOffset)
+			return returnToken, io.EOF
+		}
 
-		// Execute a step in all the dfas (which are were marked for checking in the previous loop) with the current rune.
+		// Execute a step in all the dfas with the current rune.
+		for i := 0; i < len(dfa.TokensList); i++ { // The token written after in order will get higher priority
+			token := dfa.TokensList[i]
+			dfaForToken := scanner.tokenDFAa[token]
+			dfa_result := dfaForToken.Step(input)
+			dfaTokenResults[token] = dfa_result
+			if dfa_result.IsValid() {
+				isAnyValid = true
+				foundValidToken = token
+			}
+			if dfa_result.IsIntermediate() {
+				isAnyIntermediate = true
+				foundIntermediateToken = token
+			}
+		}
 
-		// If atleast one dfa in the array of tokens' dfa returns valid/intermediate
-			// If atleast one valid is there in the array then have a mark of it outside of the loop in some variable
-			// If no valid but atleast one intermedite is there, then we dont mark the variable outside the loop. In case, if next runes do not satisfy we do need a way to say that last ones were intermediates for lexical sytanx error reporting
-			// 
+		if !isAnyValid && !isAnyIntermediate {
+			// Check if any valid token was found in the last iteration
+			if lastLoop_isAnyValid {
+				returnToken.SetTokenProperties(
+					lastLoop_foundValidToken,
+					scanner.lineNum,
+					scanner.lineOffset-uint32(len(string(lastLoop_foundValidToken))))
+				return returnToken, nil
+			}
 
-		// Feed the rune to every
+			// If any intermediates were there then we will use those for error reporting
+			if lastLoop_isAnyIntermediate {
+				return returnToken, errorhandler.RetErr(
+					fmt.Sprintf(
+						"TokenError: invalid token found at line %v at offset %v, most resembling token type was %v",
+						scanner.lineNum,
+						scanner.lineOffset,
+						string(lastLoop_foundIntermediateToken),
+					),
+					nil,
+				)
+			}
+
+			// The Program Counter can only get here if this is the 1st iteration and the very 1st rune did not satisfay any of the token types' dfa
+			return returnToken, errorhandler.RetErr(
+				fmt.Sprintf("TokenError: invalid token found at line %v at offset %v", scanner.lineNum, scanner.lineOffset),
+				nil,
+			)
+		}
+
+		// Record the offsets and the lineNums in the scanner
+		scanner.lineOffset++
+		if input == '\n' {
+			scanner.lineNum++
+			scanner.lineOffset = 0
+		}
+
+		// Set this loop important values in the lastLoop variables
+		lastLoop_isAnyValid = isAnyValid
+		lastLoop_isAnyIntermediate = isAnyIntermediate
+		lastLoop_foundValidToken = foundValidToken
+		lastLoop_foundIntermediateToken = foundIntermediateToken
+
+		// Reset variables (which need it) outside of the loop
+		isAnyValid = false
+		isAnyIntermediate = false
 	}
 }
-
-
-var
-a
-=
-9

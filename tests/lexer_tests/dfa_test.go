@@ -237,3 +237,90 @@ func BenchmarkNumberDFA(b *testing.B) {
 		}
 	}
 }
+
+// ----------------------------
+// Whitespace DFA Tests
+// ----------------------------
+
+func TestWhitespaceDFA(t *testing.T) {
+	whitespaceDFA := &dfa.WhitespaceDFA{}
+	whitespaceDFA.Initialize()
+
+	valid := []string{" ", "  ", "   ", "\t", "\t\t", " \t ", "\t \t", "    \t  \t  ", "\r"}
+	invalid := []string{"", "a", " a", "a ", "\n", " \n", "\t\n", "1", " 1", "\t1", ".", " .", "\t."}
+
+	for _, input := range valid {
+		t.Run("Valid_"+input, func(t *testing.T) {
+			testDFAString(t, whitespaceDFA, input, dfa.VALID, "WhitespaceDFA_Valid")
+		})
+	}
+
+	for _, input := range invalid {
+		t.Run("Invalid_"+input, func(t *testing.T) {
+			testDFAString(t, whitespaceDFA, input, dfa.INVALID, "WhitespaceDFA_Invalid")
+		})
+	}
+
+	// Test individual steps for mixed whitespace
+	t.Run("Steps_SpaceTab", func(t *testing.T) {
+		expected := []dfa.DfaReturn{dfa.VALID, dfa.VALID}
+		testDFASteps(t, whitespaceDFA, " \t", expected, "WhitespaceDFA_SpaceTab")
+	})
+}
+
+// ----------------------------
+// Newline DFA Tests
+// ----------------------------
+
+func TestNewlineDFA(t *testing.T) {
+	newlineDFA := &dfa.NewlineDFA{}
+	newlineDFA.Initialize()
+
+	valid := []string{"\n", "\n\n", "\n\n\n"}
+	invalid := []string{"", " ", "\t", "a", "\na", "a\n", " \n", "\n ", "\t\n", "\n\t", "1\n", "\n1"}
+
+	for _, input := range valid {
+		t.Run("Valid_"+input, func(t *testing.T) {
+			testDFAString(t, newlineDFA, input, dfa.VALID, "NewlineDFA_Valid")
+		})
+	}
+
+	for _, input := range invalid {
+		t.Run("Invalid_"+input, func(t *testing.T) {
+			testDFAString(t, newlineDFA, input, dfa.INVALID, "NewlineDFA_Invalid")
+		})
+	}
+
+	// Test individual steps for multiple newlines
+	t.Run("Steps_DoubleNewline", func(t *testing.T) {
+		expected := []dfa.DfaReturn{dfa.VALID, dfa.VALID}
+		testDFASteps(t, newlineDFA, "\n\n", expected, "NewlineDFA_DoubleNewline")
+	})
+}
+
+// ----------------------------
+// Combined Whitespace Tests
+// ----------------------------
+
+func TestWhitespaceNewlineSeparation(t *testing.T) {
+	// Test that whitespace and newline are properly separated
+	whitespaceDFA := &dfa.WhitespaceDFA{}
+	whitespaceDFA.Initialize()
+
+	newlineDFA := &dfa.NewlineDFA{}
+	newlineDFA.Initialize()
+
+	// Whitespace should not accept newlines
+	t.Run("Whitespace_RejectsNewline", func(t *testing.T) {
+		testDFAString(t, whitespaceDFA, "\n", dfa.INVALID, "WhitespaceDFA_RejectsNewline")
+	})
+
+	// Newline should not accept spaces/tabs
+	t.Run("Newline_RejectsSpace", func(t *testing.T) {
+		testDFAString(t, newlineDFA, " ", dfa.INVALID, "NewlineDFA_RejectsSpace")
+	})
+
+	t.Run("Newline_RejectsTab", func(t *testing.T) {
+		testDFAString(t, newlineDFA, "\t", dfa.INVALID, "NewlineDFA_RejectsTab")
+	})
+}

@@ -22,6 +22,9 @@ func (dfa *NumberDFA) Initialize() {
 }
 
 func (dfa *NumberDFA) Step(input rune) DfaReturn {
+	if dfa.state == -1 {
+		return INVALID
+	}
 	if dfa.state == number_start {
 		if isNumber(input) {
 			dfa.state = number_before_decimal

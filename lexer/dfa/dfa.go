@@ -95,6 +95,15 @@ const (
 )
 
 var TokensList = []TokenType{
+	EOF,
+
+	IDENTIFIER,
+	STRING,
+	NUMBER,
+	COMMENT,
+
+	WHITESPACE,
+	NEWLINE,
 	LEFT_PAREN,
 	RIGHT_PAREN,
 	LEFT_BRACE,
@@ -106,6 +115,7 @@ var TokensList = []TokenType{
 	SEMICOLON,
 	SLASH,
 	STAR,
+
 	BANG,
 	BANG_EQUAL,
 	EQUAL,
@@ -114,6 +124,7 @@ var TokensList = []TokenType{
 	GREATER_EQUAL,
 	LESS,
 	LESS_EQUAL,
+
 	AND,
 	CLASS,
 	ELSE,
@@ -130,17 +141,16 @@ var TokensList = []TokenType{
 	TRUE,
 	VAR,
 	WHILE,
-	EOF,
-	IDENTIFIER,
-	STRING,
-	NUMBER,
 }
 
 func GenerateDFAs() map[TokenType]DFA {
 
-	output := make(map[TokenType]DFA)
+	output := make(map[TokenType]DFA, len(TokensList))
 	for _, k := range TokensList {
 		if k == EOF {
+			dfa := &EofDFA{}
+			dfa.Initialize()
+			output[k] = dfa
 			continue // EOF is not a string, so we skip it
 		}
 		if k == IDENTIFIER {
@@ -155,14 +165,26 @@ func GenerateDFAs() map[TokenType]DFA {
 			output[k] = dfa
 			continue
 		}
+		if k == NUMBER {
+			dfa := &NumberDFA{}
+			dfa.Initialize()
+			output[k] = dfa
+			continue
+		}
 		if k == COMMENT {
 			dfa := &CommentDFA{}
 			dfa.Initialize()
 			output[k] = dfa
 			continue
 		}
-		if k == NUMBER {
-			dfa := &NumberDFA{}
+		if k == WHITESPACE {
+			dfa := &WhitespaceDFA{}
+			dfa.Initialize()
+			output[k] = dfa
+			continue
+		}
+		if k == NEWLINE {
+			dfa := &NewlineDFA{}
 			dfa.Initialize()
 			output[k] = dfa
 			continue

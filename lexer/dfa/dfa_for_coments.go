@@ -23,6 +23,9 @@ func (dfa *CommentDFA) Initialize() {
 }
 
 func (dfa *CommentDFA) Step(input rune) DfaReturn {
+	if dfa.state == -1 {
+		return INVALID
+	}
 	if dfa.state == comment_start {
 		if input == '/' {
 			dfa.state = comment_first_slash

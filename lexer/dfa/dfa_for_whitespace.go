@@ -22,8 +22,11 @@ func (dfa *WhitespaceDFA) Initialize() {
 }
 
 func (dfa *WhitespaceDFA) Step(input rune) DfaReturn {
+	if dfa.state == -1 {
+		return INVALID
+	}
 	if dfa.state == whitespace_start {
-		if unicode.IsSpace(input) {
+		if input != '\n' && unicode.IsSpace(input) {
 			dfa.state = whitespace_blanks
 			return VALID
 		}
@@ -31,7 +34,7 @@ func (dfa *WhitespaceDFA) Step(input rune) DfaReturn {
 		return INVALID
 	}
 	if dfa.state == whitespace_blanks {
-		if unicode.IsSpace(input) {
+		if input != '\n' && unicode.IsSpace(input) {
 			return VALID
 		}
 		dfa.state = -1

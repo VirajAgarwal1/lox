@@ -22,6 +22,9 @@ func (dfa *StringDFA) Initialize() {
 }
 
 func (dfa *StringDFA) Step(input rune) DfaReturn {
+	if dfa.state == -1 {
+		return INVALID
+	}
 	if dfa.state == string_start {
 		if input == '"' {
 			dfa.state = string_left_apos

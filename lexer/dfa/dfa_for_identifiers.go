@@ -21,6 +21,9 @@ func (dfa *IdentifierDFA) Initialize() {
 }
 
 func (dfa *IdentifierDFA) Step(input rune) DfaReturn {
+	if dfa.state == -1 {
+		return INVALID
+	}
 	if dfa.state == identifier_start {
 		if input == '_' {
 			dfa.state = identifier_mid
