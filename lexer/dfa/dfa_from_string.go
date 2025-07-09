@@ -23,6 +23,7 @@ func (dfa *InputStringDFA) Step(input rune) DfaReturn {
 	}
 	if input == dfa.str[dfa.state] {
 		if dfa.state == len(dfa.str)-1 {
+			dfa.state = -1
 			return VALID
 		}
 		dfa.state++

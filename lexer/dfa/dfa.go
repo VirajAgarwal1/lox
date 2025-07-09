@@ -94,6 +94,7 @@ const (
 	WHILE  TokenType = "while"
 )
 
+// In lexer/scanner.go, we use this list to iterate over the tokens in order of priority. Where the tokens retiurn later get higher priority.
 var TokensList = []TokenType{
 	EOF,
 

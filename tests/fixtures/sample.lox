@@ -1,1 +1,13 @@
-print "Hello world"
+ "H"
+
+w 
+world
+printer
+for  i  in  range  10     {
+    fmt.Println(i)
+}
+// Hello this is a comment
+// This is a multiline comment
+/*This is a multiline comment
+that spans multiple lines
+*/

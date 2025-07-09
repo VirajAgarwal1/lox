@@ -10,7 +10,6 @@ const (
 	comment_start commentDfaState = iota
 	comment_first_slash
 	comment_second_slash
-	comment_content
 	comment_newline
 )
 
@@ -37,7 +36,7 @@ func (dfa *CommentDFA) Step(input rune) DfaReturn {
 	if dfa.state == comment_first_slash {
 		if input == '/' {
 			dfa.state = comment_second_slash
-			return INTERMEDIATE
+			return VALID
 		}
 		dfa.state = -1
 		return INVALID
@@ -47,15 +46,7 @@ func (dfa *CommentDFA) Step(input rune) DfaReturn {
 			dfa.state = comment_newline
 			return VALID
 		}
-		dfa.state = comment_content
-		return INTERMEDIATE
-	}
-	if dfa.state == comment_content {
-		if input == '\n' {
-			dfa.state = comment_newline
-			return VALID
-		}
-		return INTERMEDIATE
+		return VALID
 	}
 	dfa.state = -1
 	return INVALID
