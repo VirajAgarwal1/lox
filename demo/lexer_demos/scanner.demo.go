@@ -21,22 +21,20 @@ const (
 // TokenTypeName returns a human-readable name for a TokenType
 func TokenTypeName(t dfa.TokenType) string {
 	switch t {
+	case dfa.EOF:
+		return "EOF"
 	case dfa.IDENTIFIER:
 		return "IDENTIFIER"
-	case dfa.NUMBER:
-		return "NUMBER"
 	case dfa.STRING:
 		return "STRING"
-	case dfa.IF:
-		return "IF"
-	case dfa.VAR:
-		return "VAR"
-	case dfa.PRINT:
-		return "PRINT"
-	case dfa.EQUAL:
-		return "EQUAL"
-	case dfa.EQUAL_EQUAL:
-		return "EQUAL_EQUAL"
+	case dfa.NUMBER:
+		return "NUMBER"
+	case dfa.COMMENT:
+		return "COMMENT"
+	case dfa.WHITESPACE:
+		return "WHITESPACE"
+	case dfa.NEWLINE:
+		return "NEWLINE"
 	case dfa.LEFT_PAREN:
 		return "LEFT_PAREN"
 	case dfa.RIGHT_PAREN:
@@ -45,11 +43,68 @@ func TokenTypeName(t dfa.TokenType) string {
 		return "LEFT_BRACE"
 	case dfa.RIGHT_BRACE:
 		return "RIGHT_BRACE"
+	case dfa.COMMA:
+		return "COMMA"
+	case dfa.DOT:
+		return "DOT"
+	case dfa.MINUS:
+		return "MINUS"
+	case dfa.PLUS:
+		return "PLUS"
 	case dfa.SEMICOLON:
 		return "SEMICOLON"
-	case dfa.EOF:
-		return "EOF"
-	// ... add all other token types
+	case dfa.SLASH:
+		return "SLASH"
+	case dfa.STAR:
+		return "STAR"
+	case dfa.BANG:
+		return "BANG"
+	case dfa.BANG_EQUAL:
+		return "BANG_EQUAL"
+	case dfa.EQUAL:
+		return "EQUAL"
+	case dfa.EQUAL_EQUAL:
+		return "EQUAL_EQUAL"
+	case dfa.GREATER:
+		return "GREATER"
+	case dfa.GREATER_EQUAL:
+		return "GREATER_EQUAL"
+	case dfa.LESS:
+		return "LESS"
+	case dfa.LESS_EQUAL:
+		return "LESS_EQUAL"
+	case dfa.AND:
+		return "AND"
+	case dfa.CLASS:
+		return "CLASS"
+	case dfa.ELSE:
+		return "ELSE"
+	case dfa.FALSE:
+		return "FALSE"
+	case dfa.FUN:
+		return "FUN"
+	case dfa.FOR:
+		return "FOR"
+	case dfa.IF:
+		return "IF"
+	case dfa.NIL:
+		return "NIL"
+	case dfa.OR:
+		return "OR"
+	case dfa.PRINT:
+		return "PRINT"
+	case dfa.RETURN:
+		return "RETURN"
+	case dfa.SUPER:
+		return "SUPER"
+	case dfa.THIS:
+		return "THIS"
+	case dfa.TRUE:
+		return "TRUE"
+	case dfa.VAR:
+		return "VAR"
+	case dfa.WHILE:
+		return "WHILE"
 	default:
 		return fmt.Sprintf("UNKNOWN(%v)", t)
 	}
