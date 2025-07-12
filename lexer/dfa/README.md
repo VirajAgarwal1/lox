@@ -2,6 +2,8 @@
 
 A Go package for building deterministic finite automata (DFAs) to handle lexical analysis in programming language scanners. I built this because I find the intersection of compiler theory and practical implementation fascinating, and wanted to create something that gives maximum flexibility for different lexical analysis needs.
 
+[**DEMO VIDEO**](../../dfa-demo.mp4)
+
 ## What This Does
 
 In this package I have written DFAs of 2 types:

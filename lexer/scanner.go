@@ -16,7 +16,7 @@ import (
 
 type Token struct {
 	TypeOfToken dfa.TokenType
-	lexemme     []rune
+	Lexemme     []rune
 	Line        uint32
 	Offset      uint32
 }
@@ -25,11 +25,11 @@ func (t *Token) SetTokenProperties(_type dfa.TokenType, _lineNum uint32, _offset
 	t.TypeOfToken = _type
 	t.Line = _lineNum
 	t.Offset = _offset
-	t.lexemme = _lexemme
+	t.Lexemme = _lexemme
 }
 
 func (t *Token) ToString() string {
-	return fmt.Sprintf("|%d|%d| [%s]Token -> `%s`", t.Line, t.Offset, string(t.TypeOfToken), string(t.lexemme))
+	return fmt.Sprintf("|%d|%d| [%s]Token -> `%s`", t.Line, t.Offset, string(t.TypeOfToken), string(t.Lexemme))
 }
 
 // TODO: Setup a new struct here which will have the lastInput properties along with the dfa tokens
@@ -154,6 +154,7 @@ func (scanner *LexicalAnalyzer) ReadToken() (Token, error) {
 		}
 		scanner.lexemme = append(scanner.lexemme, input)
 
+		// TODO: This loop can be done concurrently, and that should speed up the processing speed by a lot.
 		// Execute a step in all the dfas with the current rune.
 		for i := 0; i < len(dfa.TokensList); i++ { // The token written after in the order of dfa.TokensList will get higher priority
 			token := dfa.TokensList[i]

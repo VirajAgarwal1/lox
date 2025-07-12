@@ -2,6 +2,8 @@
 
 A Go package for lexical analysis that converts source code into tokens using deterministic finite automata (DFAs). This is a complete lexical analyzer that I built because I find the intersection of compiler theory and practical implementation fascinating, and wanted to create something that gives maximum flexibility for tokenizing programming languages.
 
+[**SCANNER VIDEO**](../scanner-demo.mp4)
+
 ## What This Does
 
 This package provides a `LexicalAnalyzer` that takes a stream of runes and produces a stream of tokens. It's designed to be the lexical analysis component of a compiler or interpreter, sitting between your source code reader and your parser.
