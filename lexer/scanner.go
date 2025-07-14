@@ -84,6 +84,11 @@ func (scanner *LexicalAnalyzer) ReadToken() (Token, error) {
 		tokenLineOffset = scanner.lineOffset
 	}
 
+	tempResultStorage := make([]dfa.DfaReturn, len(dfa.TokensList))
+	for i := range dfa.TokensList {
+		tempResultStorage[i] = dfa.VALID
+	}
+
 	isAnyValid := false // For checking if any vlaid token was found in this run of this function's for loop.
 	isAnyIntermediate := false
 	var foundValidToken dfa.TokenType
@@ -157,9 +162,13 @@ func (scanner *LexicalAnalyzer) ReadToken() (Token, error) {
 		// TODO: This loop can be done concurrently, and that should speed up the processing speed by a lot.
 		// Execute a step in all the dfas with the current rune.
 		for i := 0; i < len(dfa.TokensList); i++ { // The token written after in the order of dfa.TokensList will get higher priority
+			if tempResultStorage[i] == dfa.INVALID {
+				continue
+			}
 			token := dfa.TokensList[i]
 			dfaForToken := scanner.tokenDFAa[token]
 			dfa_result := dfaForToken.Step(input)
+			tempResultStorage[i] = dfa_result
 			if dfa_result.IsValid() {
 				isAnyValid = true
 				foundValidToken = token
