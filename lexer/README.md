@@ -2,7 +2,12 @@
 
 A Go package for lexical analysis that converts source code into tokens using deterministic finite automata (DFAs). This is a complete lexical analyzer that I built because I find the intersection of compiler theory and practical implementation fascinating, and wanted to create something that gives maximum flexibility for tokenizing programming languages.
 
-[**SCANNER VIDEO**](../scanner-demo.mp4)
+## Demo
+[**Demo Video Link**](../scanner-demo.mp4)
+
+## Performance
+
+This lexer is optimized to minimize memory allocations and maximize throughput. It uses prebuilt DFA structures, reuses internal buffers across invocations, and keeps allocation counts per tokenization cycle very low. The result is a fast and lightweight scanner that can handle large inputs efficiently. Benchmarks show that it's suitable for real-time or batch lexing tasks, such as language tooling or compiler pipelines.
 
 ## What This Does
 

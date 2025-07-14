@@ -666,14 +666,27 @@ func TestComplexExpression(t *testing.T) {
 
 // Benchmark test for performance
 func BenchmarkScanner(b *testing.B) {
-	input := `var x = 123.45;
+	input := strings.Repeat(`var x = 123.45;
 	for (var i = 0; i < 10; i = i + 1) {
 		if (x > i) {
 			print "x is greater than " + i;
 		}
-	}`
+	}
+	`, 1000)
+
+	b.ReportAllocs()
+
+	scanner := &lexer.LexicalAnalyzer{}
+	reader := bufio.NewReader(strings.NewReader(input))
 
 	for b.Loop() {
-		scanAllTokens(nil, input)
+		scanner.Initialize(reader)
+		for {
+			_, err := scanner.ReadToken()
+			if err == io.EOF {
+				break
+			}
+		}
+		scanner.Reset()
 	}
 }

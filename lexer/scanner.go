@@ -33,10 +33,11 @@ func (t *Token) ToString() string {
 }
 
 // TODO: Setup a new struct here which will have the lastInput properties along with the dfa tokens
+var sharedDFAs = dfa.GenerateDFAs() // Pre-computing it here so that the Lexical Scanner can work with multiple inputs in quick succession without needing to compute the DFAs for lexemmes again.
 
 type LexicalAnalyzer struct {
 	source              *bufio.Reader
-	tokenDFAa           map[dfa.TokenType]dfa.DFA
+	tokenDFA            map[dfa.TokenType]dfa.DFA
 	lineNum             uint32
 	lineOffset          uint32
 	prevLineOffset      uint32 // When a '\n' rune ends a token then it also ends up resetting offset to 0 (and lineNum++) which makes this the only way one can the offset for the token which got ended by the `\n`
@@ -54,7 +55,7 @@ type LexicalAnalyzer struct {
 
 func (scanner *LexicalAnalyzer) Initialize(source *bufio.Reader) {
 	scanner.source = source
-	scanner.tokenDFAa = dfa.GenerateDFAs()
+	scanner.tokenDFA = sharedDFAs
 	scanner.lineNum = 0
 	scanner.lineOffset = 0
 	scanner.lexemme = nil
@@ -63,7 +64,7 @@ func (scanner *LexicalAnalyzer) Initialize(source *bufio.Reader) {
 
 func (scanner *LexicalAnalyzer) resetDFAs() {
 	for _, token := range dfa.TokensList {
-		scanner.tokenDFAa[token].Reset()
+		scanner.tokenDFA[token].Reset()
 	}
 }
 
@@ -166,7 +167,7 @@ func (scanner *LexicalAnalyzer) ReadToken() (Token, error) {
 				continue
 			}
 			token := dfa.TokensList[i]
-			dfaForToken := scanner.tokenDFAa[token]
+			dfaForToken := scanner.tokenDFA[token]
 			dfa_result := dfaForToken.Step(input)
 			tempResultStorage[i] = dfa_result
 			if dfa_result.IsValid() {
@@ -231,4 +232,13 @@ func (scanner *LexicalAnalyzer) ReadToken() (Token, error) {
 		isAnyValid = false
 		isAnyIntermediate = false
 	}
+}
+
+func (scanner *LexicalAnalyzer) Reset() {
+	scanner.source = nil
+	scanner.resetDFAs()
+	scanner.lineNum = 0
+	scanner.lineOffset = 0
+	scanner.lexemme = nil
+	scanner.lastInputExists = false
 }
