@@ -147,7 +147,6 @@ while (count < 3) {
 	// Section 4: Read tokens one by one
 	for {
 		token, err := scanner.ReadToken()
-
 		if err != nil && err != io.EOF {
 			fmt.Printf("%s❗ Error: %s%s\n", Red, err.Error(), Reset)
 			break

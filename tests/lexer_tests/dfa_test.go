@@ -144,9 +144,9 @@ func TestCommentDFA(t *testing.T) {
 	commentDFA := &dfa.CommentDFA{}
 	commentDFA.Initialize()
 
-	valid := []string{"//\n", "// comment\n", "//!@#$\n"}
+	valid := []string{"//", "// comment", "//!@#$"}
 	intermediate := []string{"/"}
-	invalid := []string{"//\nnextline", " a//", "// comment\n nextline", "/ comm"}
+	invalid := []string{"//\nnextline", " a//", "// comment\n nextline", "/ comm", "// single-line comments only\n"}
 
 	for _, input := range valid {
 		t.Run("Valid_"+input, func(t *testing.T) {

@@ -44,7 +44,7 @@ func (dfa *CommentDFA) Step(input rune) DfaReturn {
 	if dfa.state == comment_second_slash {
 		if input == '\n' {
 			dfa.state = comment_newline
-			return VALID
+			return INVALID
 		}
 		return VALID
 	}
