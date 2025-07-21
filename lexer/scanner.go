@@ -42,24 +42,24 @@ type LexicalAnalyzer struct {
 	currentInput        rune
 	currentPos          *inputRunePosition
 	lexemme             []rune
-	lastInputExists     bool
 	sustainCurrentInput bool
 }
 
-//	func (tokenPos *inputRunePosition) stepBack() {
-//		if tokenPos.lineOffset == 0 {
-//			tokenPos.lineNum--
-//			tokenPos.lineOffset = tokenPos.prevLineOffset
-//			return
-//		}
-//		tokenPos.lineOffset--
-//	}
-//
-//	func (tokenPos *inputRunePosition) getPos() (lineNum uint32, lineOffset uint32) {
-//		lineNum = tokenPos.lineNum
-//		lineOffset = tokenPos.lineOffset
-//		return
-//	}
+func (tokenPos *inputRunePosition) getPrevPos() (lineNum uint32, lineOffset uint32) {
+	if tokenPos.lineOffset == 0 {
+		if tokenPos.lineNum > 0 {
+			lineNum = tokenPos.lineNum - 1
+			lineOffset = tokenPos.prevLineOffset
+			return
+		}
+		lineNum = tokenPos.lineNum
+		lineOffset = tokenPos.lineOffset
+		return
+	}
+	lineNum = tokenPos.lineNum
+	lineOffset = tokenPos.lineOffset - 1
+	return
+}
 func (tokenPos *inputRunePosition) initialize() {
 	tokenPos.lineNum = 0
 	tokenPos.lineOffset = 0
@@ -72,7 +72,6 @@ func (tokenPos *inputRunePosition) step(input rune) {
 		tokenPos.lineOffset = 0
 		return
 	}
-	tokenPos.lineNum++
 	tokenPos.lineOffset++
 }
 func (tokenPos *inputRunePosition) reset() {
@@ -97,28 +96,18 @@ func (scanner *LexicalAnalyzer) Initialize(source *bufio.Reader) {
 	scanner.stateManger.Initialize()
 	scanner.currentPos.initialize()
 	scanner.lexemme = nil
-	scanner.lastInputExists = false
-	scanner.sustainCurrentInput = true
+	scanner.sustainCurrentInput = false
 }
 func (scanner *LexicalAnalyzer) Reset() {
 	scanner.source = nil
-	scanner.stateManger.Reset()
+	scanner.stateManger.FullReset()
 	scanner.currentPos.reset()
 	scanner.lexemme = nil
-	scanner.lastInputExists = false
-	scanner.sustainCurrentInput = true
+	scanner.sustainCurrentInput = false
 }
 
 func (scanner *LexicalAnalyzer) prepareForNextToken() {
-	if scanner.sustainCurrentInput {
-		scanner.stateManger.Reset()
-		scanner.lastInputExists = true
-		scanner.lexemme = scanner.lexemme[:1]
-		scanner.lexemme[0] = scanner.currentInput
-		return
-	}
-	scanner.stateManger.Reset()
-	scanner.lastInputExists = false
+	scanner.stateManger.FullReset()
 	scanner.lexemme = nil
 }
 func (scanner *LexicalAnalyzer) ReadToken() (*Token, error) {
@@ -127,14 +116,13 @@ func (scanner *LexicalAnalyzer) ReadToken() (*Token, error) {
 	*/
 	returnToken := Token{}
 	var err error
-	tokenStartingLine := scanner.currentPos.lineNum
-	tokenStartingLineOffset := scanner.currentPos.lineOffset
+	tokenStartingLine, tokenStartingLineOffset := scanner.currentPos.getPrevPos()
 
 	defer scanner.prepareForNextToken()
 
 	for i := 0; ; i++ {
 		// Read one rune from the source
-		if !scanner.lastInputExists {
+		if !scanner.sustainCurrentInput {
 			scanner.currentInput, _, err = scanner.source.ReadRune()
 			if err != nil && err != io.EOF {
 				scanner.sustainCurrentInput = false
@@ -193,8 +181,8 @@ func (scanner *LexicalAnalyzer) ReadToken() (*Token, error) {
 
 		// Stop iterating if all the DFAs are yielding INVALID
 		if scanner.stateManger.CurrentLoopDfaResults.AreAllInvalid() {
-			scanner.sustainCurrentInput = true
 			// Check if any valid token was found in the last iteration, if yes then we report it as our found token
+			scanner.sustainCurrentInput = true
 			if scanner.stateManger.PreviousLoopDfaResults.IsAnyValidToken {
 				returnToken.SetTokenProperties(
 					scanner.stateManger.PreviousLoopDfaResults.ValidToken,
@@ -204,6 +192,7 @@ func (scanner *LexicalAnalyzer) ReadToken() (*Token, error) {
 				)
 				return &returnToken, nil
 			}
+			scanner.sustainCurrentInput = false
 			// If any intermediates were there then we will use those for error reporting
 			if scanner.stateManger.PreviousLoopDfaResults.IsAnyIntermediateToken {
 				return &returnToken, errorhandler.RetErr(
@@ -217,11 +206,13 @@ func (scanner *LexicalAnalyzer) ReadToken() (*Token, error) {
 				)
 			}
 			// The Program Counter can only get here if this is the 1st iteration and the very 1st rune did not satisfay any of the token types' dfa
-			scanner.lastInputExists = false
 			return &returnToken, errorhandler.RetErr(
 				fmt.Sprintf("TokenError: invalid token found at line %v at offset %v", tokenStartingLine, tokenStartingLineOffset),
 				nil,
 			)
 		}
+
+		scanner.stateManger.ClearCurrentLoopDfaResults()
+		scanner.sustainCurrentInput = false
 	}
 }

@@ -133,6 +133,12 @@ func (resultsSummary *summaryOfAllDfaStates) AreAllInvalid() bool {
 
 func (stateManager *DFAStatesManager) Initialize() {
 	stateManager.DfaForToken = stateManager.GenerateDFAs()
+	stateManager.DfaResultForToken = make([]DfaResult, len(TokensList))
+	for i := range len(TokensList) {
+		stateManager.DfaResultForToken[i] = VALID
+	}
+	stateManager.CurrentLoopDfaResults = &summaryOfAllDfaStates{}
+	stateManager.PreviousLoopDfaResults = &summaryOfAllDfaStates{}
 	stateManager.CurrentLoopDfaResults.initialize()
 	stateManager.PreviousLoopDfaResults.initialize()
 }
@@ -143,9 +149,6 @@ func (stateManager *DFAStatesManager) putCurrentSummaryInPrevious() {
 	stateManager.PreviousLoopDfaResults.IntermediateToken = stateManager.CurrentLoopDfaResults.IntermediateToken
 }
 func (stateManager *DFAStatesManager) Step(input rune) {
-
-	stateManager.putCurrentSummaryInPrevious()
-
 	// Execute a step in all the dfas with the current rune.
 	for i := range len(TokensList) {
 		// The token written after in the order of dfa.TokensList will get higher priority
@@ -163,12 +166,19 @@ func (stateManager *DFAStatesManager) Step(input rune) {
 			stateManager.CurrentLoopDfaResults.IntermediateToken = token
 		}
 	}
-
 }
-func (stateManager *DFAStatesManager) Reset() {
+func (stateManager *DFAStatesManager) ClearCurrentLoopDfaResults() {
+	stateManager.putCurrentSummaryInPrevious()
+	stateManager.CurrentLoopDfaResults.initialize()
+}
+func (stateManager *DFAStatesManager) ResetAllDFAs() {
 	for i := range len(TokensList) {
 		stateManager.DfaForToken[i].Reset()
+		stateManager.DfaResultForToken[i] = VALID
 	}
+}
+func (stateManager *DFAStatesManager) FullReset() {
+	stateManager.ResetAllDFAs()
 	stateManager.CurrentLoopDfaResults.initialize()
 	stateManager.PreviousLoopDfaResults.initialize()
 }
@@ -218,7 +228,6 @@ func (stateManager *DFAStatesManager) GenerateDFAs() []DFA {
 			output[i] = dfa
 			continue
 		}
-
 		dfa := &InputStringDFA{}
 		dfa.Initialize(string(token))
 		output[i] = dfa

@@ -171,7 +171,7 @@ while (count < 3) {
 }
 
 // Prints each token nicely with token type, lexeme, and position
-func printStyledToken(token lexer.Token) {
+func printStyledToken(token *lexer.Token) {
 	color := tokenColor(token.TypeOfToken)
 
 	fmt.Printf("%s🧩 Token:%s  %s%-14s%s  at Line %2d, Offset %2d  →  `%s`\n",

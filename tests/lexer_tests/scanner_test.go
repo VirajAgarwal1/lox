@@ -22,9 +22,9 @@ func createScannerFromString(input string) *lexer.LexicalAnalyzer {
 	return scanner
 }
 
-func scanAllTokens(t *testing.T, input string) ([]lexer.Token, []error) {
+func scanAllTokens(_ *testing.T, input string) ([]*lexer.Token, []error) {
 	scanner := createScannerFromString(input)
-	var tokens []lexer.Token
+	var tokens []*lexer.Token
 	var errors []error
 
 	for {
@@ -376,7 +376,7 @@ func TestLineAndOffsetTracking(t *testing.T) {
 	}
 
 	// Check offsets
-	expectedOffsets := []uint32{0, 1, 0, 1, 0, 1} // a, b, c, EOF
+	expectedOffsets := []uint32{0, 1, 0, 1, 0, 0} // a, b, c, EOF
 	for i, expectedOffset := range expectedOffsets {
 		if tokens[i].Offset != expectedOffset {
 			t.Errorf("Token %d: expected offset %d, got %d", i, expectedOffset, tokens[i].Offset)
