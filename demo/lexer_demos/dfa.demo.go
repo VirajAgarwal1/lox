@@ -35,17 +35,28 @@ func demonstrateInput(input string, tokenTypes []dfa.TokenType) {
 	fmt.Printf("%sWe'll now feed the input into each DFA one character at a time.%s\n", "", Reset)
 	fmt.Printf("%sYou’ll see how each DFA changes state as it reads each character.%s\n", "", Reset)
 
-	dfas := dfa.GenerateDFAs()
+	statesManager := dfa.DFAStatesManager{}
+	statesManager.Initialize()
+	dfas := statesManager.DfaForToken
 
 	// Process each character
 	for i, char := range input {
 		fmt.Printf("   Step %d: '%c' → ", i+1, char)
 
-		for j, tokenType := range tokenTypes {
-			result := dfas[tokenType].Step(char)
+		for i, token := range dfa.TokensList {
+			j := -1
+			for _, wantedToken := range tokenTypes {
+				if token == wantedToken {
+					j = i
+				}
+			}
+			if j == -1 {
+				continue
+			}
+			result := dfas[i].Step(char)
 			fmt.Printf("%s%s %s%s",
 				colorByState(result),
-				string(tokenType),
+				string(token),
 				Reset,
 				func() string {
 					if j < len(tokenTypes)-1 {
