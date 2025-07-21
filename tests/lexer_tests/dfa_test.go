@@ -10,7 +10,7 @@ import (
 // Helper Functions
 // ----------------------------
 
-func testDFAString(t *testing.T, inputDFA dfa.DFA, input string, expectedFinal dfa.DfaReturn, testName string) {
+func testDFAString(t *testing.T, inputDFA dfa.DFA, input string, expectedFinal dfa.DfaResult, testName string) {
 	t.Helper()
 
 	inputDFA.Reset()
@@ -31,7 +31,7 @@ func testDFAString(t *testing.T, inputDFA dfa.DFA, input string, expectedFinal d
 	}
 }
 
-func testDFASteps(t *testing.T, inputDFA dfa.DFA, input string, expected []dfa.DfaReturn, testName string) {
+func testDFASteps(t *testing.T, inputDFA dfa.DFA, input string, expected []dfa.DfaResult, testName string) {
 	t.Helper()
 	inputDFA.Reset()
 
@@ -78,7 +78,7 @@ func TestNumberDFA(t *testing.T) {
 	}
 
 	t.Run("Steps_123.45", func(t *testing.T) {
-		expected := []dfa.DfaReturn{dfa.VALID, dfa.VALID, dfa.VALID, dfa.INTERMEDIATE, dfa.VALID, dfa.VALID}
+		expected := []dfa.DfaResult{dfa.VALID, dfa.VALID, dfa.VALID, dfa.INTERMEDIATE, dfa.VALID, dfa.VALID}
 		testDFASteps(t, numberDFA, "123.45", expected, "NumberDFA_123.45")
 	})
 }
@@ -173,7 +173,7 @@ func TestInputStringDFA(t *testing.T) {
 	cases := []struct {
 		target string
 		input  string
-		expect dfa.DfaReturn
+		expect dfa.DfaResult
 	}{
 		{"if", "if", dfa.VALID},
 		{"if", "i", dfa.INTERMEDIATE},
@@ -263,7 +263,7 @@ func TestWhitespaceDFA(t *testing.T) {
 
 	// Test individual steps for mixed whitespace
 	t.Run("Steps_SpaceTab", func(t *testing.T) {
-		expected := []dfa.DfaReturn{dfa.VALID, dfa.VALID}
+		expected := []dfa.DfaResult{dfa.VALID, dfa.VALID}
 		testDFASteps(t, whitespaceDFA, " \t", expected, "WhitespaceDFA_SpaceTab")
 	})
 }
@@ -293,7 +293,7 @@ func TestNewlineDFA(t *testing.T) {
 
 	// Test individual steps for multiple newlines
 	t.Run("Steps_DoubleNewline", func(t *testing.T) {
-		expected := []dfa.DfaReturn{dfa.VALID, dfa.VALID}
+		expected := []dfa.DfaResult{dfa.VALID, dfa.VALID}
 		testDFASteps(t, newlineDFA, "\n\n", expected, "NewlineDFA_DoubleNewline")
 	})
 }

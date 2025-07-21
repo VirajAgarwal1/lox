@@ -19,7 +19,7 @@ func (dfa *NewlineDFA) Initialize() {
 	dfa.state = newline_start
 }
 
-func (dfa *NewlineDFA) Step(input rune) DfaReturn {
+func (dfa *NewlineDFA) Step(input rune) DfaResult {
 	if dfa.state == -1 {
 		return INVALID
 	}

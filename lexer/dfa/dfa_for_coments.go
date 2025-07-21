@@ -21,7 +21,7 @@ func (dfa *CommentDFA) Initialize() {
 	dfa.state = comment_start
 }
 
-func (dfa *CommentDFA) Step(input rune) DfaReturn {
+func (dfa *CommentDFA) Step(input rune) DfaResult {
 	if dfa.state == -1 {
 		return INVALID
 	}

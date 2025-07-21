@@ -25,11 +25,11 @@ func (b *BufferedLexicalAnalyzer) Initialize(scanner *LexicalAnalyzer) {
 	b.buffer[b.prev_i].err = fmt.Errorf("no previous token exists")
 
 	t, err := b.scanner.ReadToken()
-	b.buffer[b.cur_i].t = &t
+	b.buffer[b.cur_i].t = t
 	b.buffer[b.cur_i].err = err
 
 	t, err = b.scanner.ReadToken()
-	b.buffer[b.next_i].t = &t
+	b.buffer[b.next_i].t = t
 	b.buffer[b.next_i].err = err
 }
 func (b *BufferedLexicalAnalyzer) ConsumeOneToken() (*Token, error) {
@@ -38,7 +38,7 @@ func (b *BufferedLexicalAnalyzer) ConsumeOneToken() (*Token, error) {
 	out_error := b.buffer[b.cur_i].err
 
 	t, err := b.scanner.ReadToken()
-	b.buffer[b.prev_i].t = &t
+	b.buffer[b.prev_i].t = t
 	b.buffer[b.prev_i].err = err
 
 	old_prev := b.prev_i
@@ -54,6 +54,6 @@ func (b *BufferedLexicalAnalyzer) NextTokenWithoutConsume() (*Token, error) {
 func (b *BufferedLexicalAnalyzer) CurrentTokenWithoutConsume() (*Token, error) {
 	return b.buffer[b.cur_i].t, b.buffer[b.cur_i].err
 }
-func (b *BufferedLexicalAnalyzer) PrevTokenWithoutConsume() (*Token, error) {
+func (b *BufferedLexicalAnalyzer) PreviousTokenWithoutConsume() (*Token, error) {
 	return b.buffer[b.prev_i].t, b.buffer[b.prev_i].err
 }

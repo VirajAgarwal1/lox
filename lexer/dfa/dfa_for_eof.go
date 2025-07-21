@@ -10,7 +10,7 @@ type EofDFA struct {
 func (dfa *EofDFA) Initialize() {
 }
 
-func (dfa *EofDFA) Step(input rune) DfaReturn {
+func (dfa *EofDFA) Step(input rune) DfaResult {
 	return INVALID
 }
 

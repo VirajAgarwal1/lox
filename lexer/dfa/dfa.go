@@ -1,55 +1,17 @@
 package dfa
 
-type DFA interface {
-	Step(input rune) DfaReturn
-	Reset()
-}
-
 const (
-	INVALID DfaReturn = iota
+	INVALID DfaResult = iota
 	INTERMEDIATE
 	VALID
-)
 
-type DfaReturn byte
-
-func (s *DfaReturn) ToString() string {
-	if int(*s) == 0 {
-		return "INVALID"
-	}
-	if int(*s) == 1 {
-		return "INTERMEDIATE"
-	}
-	if int(*s) == 2 {
-		return "VALID"
-	}
-	return ""
-}
-
-func (s *DfaReturn) IsValid() bool {
-	return *s == VALID
-}
-
-func (s *DfaReturn) IsIntermediate() bool {
-	return *s == INTERMEDIATE
-}
-
-func (s *DfaReturn) IsInvalid() bool {
-	return *s == INVALID
-}
-
-type TokenType string
-
-// These are all lexemes which will identified by the scanner.
-const (
+	// These are all lexemes which will identified by the scanner.
 	EOF TokenType = "EOF"
-
 	// Literals
 	IDENTIFIER TokenType = "IDENTIFIER"
 	STRING     TokenType = "STRING"
 	NUMBER     TokenType = "NUMBER"
 	COMMENT    TokenType = "COMMENT"
-
 	// Single-char tokens
 	WHITESPACE  TokenType = " "
 	NEWLINE     TokenType = "\n"
@@ -64,7 +26,6 @@ const (
 	SEMICOLON   TokenType = ";"
 	SLASH       TokenType = "/"
 	STAR        TokenType = "*"
-
 	// One-or-two char tokens
 	BANG          TokenType = "!"
 	BANG_EQUAL    TokenType = "!="
@@ -74,7 +35,6 @@ const (
 	GREATER_EQUAL TokenType = ">="
 	LESS          TokenType = "<"
 	LESS_EQUAL    TokenType = "<="
-
 	// Keywords.
 	AND    TokenType = "and"
 	CLASS  TokenType = "class"
@@ -144,57 +104,147 @@ var TokensList = []TokenType{
 	WHILE,
 }
 
-func GenerateDFAs() map[TokenType]DFA {
+type summaryOfAllDfaStates struct {
+	IsAnyValidToken        bool
+	IsAnyIntermediateToken bool
+	ValidToken             TokenType
+	IntermediateToken      TokenType
+}
+type DFAStatesManager struct {
+	DfaForToken            []DFA
+	DfaResultForToken      []DfaResult
+	CurrentLoopDfaResults  *summaryOfAllDfaStates
+	PreviousLoopDfaResults *summaryOfAllDfaStates
+}
+type DFA interface {
+	Step(input rune) DfaResult
+	Reset()
+}
+type TokenType string
+type DfaResult byte
 
-	output := make(map[TokenType]DFA, len(TokensList))
-	for _, k := range TokensList {
-		if k == EOF {
+func (resultsSummary *summaryOfAllDfaStates) initialize() {
+	resultsSummary.IsAnyValidToken = false
+	resultsSummary.IsAnyIntermediateToken = false
+}
+func (resultsSummary *summaryOfAllDfaStates) AreAllInvalid() bool {
+	return !(resultsSummary.IsAnyIntermediateToken || resultsSummary.IsAnyValidToken)
+}
+
+func (stateManager *DFAStatesManager) Initialize() {
+	stateManager.DfaForToken = stateManager.GenerateDFAs()
+	stateManager.CurrentLoopDfaResults.initialize()
+	stateManager.PreviousLoopDfaResults.initialize()
+}
+func (stateManager *DFAStatesManager) putCurrentSummaryInPrevious() {
+	stateManager.PreviousLoopDfaResults.IsAnyValidToken = stateManager.CurrentLoopDfaResults.IsAnyValidToken
+	stateManager.PreviousLoopDfaResults.IsAnyIntermediateToken = stateManager.CurrentLoopDfaResults.IsAnyIntermediateToken
+	stateManager.PreviousLoopDfaResults.ValidToken = stateManager.CurrentLoopDfaResults.ValidToken
+	stateManager.PreviousLoopDfaResults.IntermediateToken = stateManager.CurrentLoopDfaResults.IntermediateToken
+}
+func (stateManager *DFAStatesManager) Step(input rune) {
+
+	stateManager.putCurrentSummaryInPrevious()
+
+	// Execute a step in all the dfas with the current rune.
+	for i := range len(TokensList) {
+		// The token written after in the order of dfa.TokensList will get higher priority
+		if stateManager.DfaResultForToken[i] == INVALID {
+			continue
+		}
+		token := TokensList[i]
+		stateManager.DfaResultForToken[i] = stateManager.DfaForToken[i].Step(input)
+		if stateManager.DfaResultForToken[i].IsValid() {
+			stateManager.CurrentLoopDfaResults.IsAnyValidToken = true
+			stateManager.CurrentLoopDfaResults.ValidToken = token
+		}
+		if stateManager.DfaResultForToken[i].IsIntermediate() {
+			stateManager.CurrentLoopDfaResults.IsAnyIntermediateToken = true
+			stateManager.CurrentLoopDfaResults.IntermediateToken = token
+		}
+	}
+
+}
+func (stateManager *DFAStatesManager) Reset() {
+	for i := range len(TokensList) {
+		stateManager.DfaForToken[i].Reset()
+	}
+	stateManager.CurrentLoopDfaResults.initialize()
+	stateManager.PreviousLoopDfaResults.initialize()
+}
+func (stateManager *DFAStatesManager) GenerateDFAs() []DFA {
+
+	output := make([]DFA, len(TokensList))
+	for i, token := range TokensList {
+		if token == EOF {
 			dfa := &EofDFA{}
 			dfa.Initialize()
-			output[k] = dfa
+			output[i] = dfa
 			continue // EOF is not a string, so we skip it
 		}
-		if k == IDENTIFIER {
+		if token == IDENTIFIER {
 			dfa := &IdentifierDFA{}
 			dfa.Initialize()
-			output[k] = dfa
+			output[i] = dfa
 			continue
 		}
-		if k == STRING {
+		if token == STRING {
 			dfa := &StringDFA{}
 			dfa.Initialize()
-			output[k] = dfa
+			output[i] = dfa
 			continue
 		}
-		if k == NUMBER {
+		if token == NUMBER {
 			dfa := &NumberDFA{}
 			dfa.Initialize()
-			output[k] = dfa
+			output[i] = dfa
 			continue
 		}
-		if k == COMMENT {
+		if token == COMMENT {
 			dfa := &CommentDFA{}
 			dfa.Initialize()
-			output[k] = dfa
+			output[i] = dfa
 			continue
 		}
-		if k == WHITESPACE {
+		if token == WHITESPACE {
 			dfa := &WhitespaceDFA{}
 			dfa.Initialize()
-			output[k] = dfa
+			output[i] = dfa
 			continue
 		}
-		if k == NEWLINE {
+		if token == NEWLINE {
 			dfa := &NewlineDFA{}
 			dfa.Initialize()
-			output[k] = dfa
+			output[i] = dfa
 			continue
 		}
 
 		dfa := &InputStringDFA{}
-		dfa.Initialize(string(k))
-		output[k] = dfa
+		dfa.Initialize(string(token))
+		output[i] = dfa
 	}
 
 	return output
+}
+
+func (s *DfaResult) ToString() string {
+	if int(*s) == 0 {
+		return "INVALID"
+	}
+	if int(*s) == 1 {
+		return "INTERMEDIATE"
+	}
+	if int(*s) == 2 {
+		return "VALID"
+	}
+	return ""
+}
+func (s *DfaResult) IsValid() bool {
+	return *s == VALID
+}
+func (s *DfaResult) IsIntermediate() bool {
+	return *s == INTERMEDIATE
+}
+func (s *DfaResult) IsInvalid() bool {
+	return *s == INVALID
 }

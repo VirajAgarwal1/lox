@@ -20,7 +20,7 @@ func (dfa *IdentifierDFA) Initialize() {
 	dfa.state = identifier_start
 }
 
-func (dfa *IdentifierDFA) Step(input rune) DfaReturn {
+func (dfa *IdentifierDFA) Step(input rune) DfaResult {
 	if dfa.state == -1 {
 		return INVALID
 	}

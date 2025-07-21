@@ -17,7 +17,7 @@ func (dfa *InputStringDFA) Initialize(_str string) {
 	dfa.state = 0
 }
 
-func (dfa *InputStringDFA) Step(input rune) DfaReturn {
+func (dfa *InputStringDFA) Step(input rune) DfaResult {
 	if dfa.state == -1 {
 		return INVALID
 	}

@@ -21,7 +21,7 @@ func (dfa *WhitespaceDFA) Initialize() {
 	dfa.state = whitespace_start
 }
 
-func (dfa *WhitespaceDFA) Step(input rune) DfaReturn {
+func (dfa *WhitespaceDFA) Step(input rune) DfaResult {
 	if dfa.state == -1 {
 		return INVALID
 	}

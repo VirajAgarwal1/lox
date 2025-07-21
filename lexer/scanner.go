@@ -21,11 +21,15 @@ import (
 	So, the twice execution problem is here to stay for now, But I'll still put a todo. ->
 	TODO: Fix the problem inefficiency of the 1st rune of a tokken going through all the lexemmes DFAs twice.
 
-	TODO: Setup a new struct here which will have the lastInput properties along with the dfa tokens
+	TODO: Setup a new struct which will have the lastInput properties along with the dfa tokens
 */
 
-var preBuiltDFAs = dfa.GenerateDFAs() // Pre-computing it here so that the Lexical Scanner can work with multiple inputs in quick succession without needing to compute the DFAs for lexemmes again.
-
+// type lastReadTokenRun
+type inputRunePosition struct {
+	lineNum        uint32
+	lineOffset     uint32
+	prevLineOffset uint32
+}
 type Token struct {
 	TypeOfToken dfa.TokenType
 	Lexemme     []rune
@@ -34,211 +38,190 @@ type Token struct {
 }
 type LexicalAnalyzer struct {
 	source              *bufio.Reader
-	tokenDFA            map[dfa.TokenType]dfa.DFA
-	lineNum             uint32
-	lineOffset          uint32
-	prevLineOffset      uint32 // When a '\n' rune ends a token then it also ends up resetting offset to 0 (and lineNum++) which makes this the only way one can the offset for the token which got ended by the `\n`
+	stateManger         *dfa.DFAStatesManager
+	currentInput        rune
+	currentPos          *inputRunePosition
 	lexemme             []rune
 	lastInputExists     bool
-	lastInput           rune
-	lastInputLineNum    uint32
-	lastInputLineOffset uint32
+	sustainCurrentInput bool
 }
 
-func (t *Token) SetTokenProperties(_type dfa.TokenType, _lineNum uint32, _offset uint32, _lexemme []rune) {
-	t.TypeOfToken = _type
-	t.Line = _lineNum
-	t.Offset = _offset
-	t.Lexemme = _lexemme
+//	func (tokenPos *inputRunePosition) stepBack() {
+//		if tokenPos.lineOffset == 0 {
+//			tokenPos.lineNum--
+//			tokenPos.lineOffset = tokenPos.prevLineOffset
+//			return
+//		}
+//		tokenPos.lineOffset--
+//	}
+//
+//	func (tokenPos *inputRunePosition) getPos() (lineNum uint32, lineOffset uint32) {
+//		lineNum = tokenPos.lineNum
+//		lineOffset = tokenPos.lineOffset
+//		return
+//	}
+func (tokenPos *inputRunePosition) initialize() {
+	tokenPos.lineNum = 0
+	tokenPos.lineOffset = 0
+	tokenPos.prevLineOffset = 0
 }
-func (t *Token) ToString() string {
-	return fmt.Sprintf("|%d|%d| [%s]Token -> `%s`", t.Line, t.Offset, string(t.TypeOfToken), string(t.Lexemme))
+func (tokenPos *inputRunePosition) step(input rune) {
+	if input == '\n' {
+		tokenPos.lineNum++
+		tokenPos.prevLineOffset = tokenPos.lineOffset
+		tokenPos.lineOffset = 0
+		return
+	}
+	tokenPos.lineNum++
+	tokenPos.lineOffset++
 }
+func (tokenPos *inputRunePosition) reset() {
+	tokenPos.initialize()
+}
+
+func (tok *Token) SetTokenProperties(_type dfa.TokenType, _lineNum uint32, _offset uint32, _lexemme []rune) {
+	tok.TypeOfToken = _type
+	tok.Line = _lineNum
+	tok.Offset = _offset
+	tok.Lexemme = _lexemme
+}
+func (tok *Token) ToString() string {
+	return fmt.Sprintf("|%d|%d| [%s]Token -> `%s`", tok.Line, tok.Offset, string(tok.TypeOfToken), string(tok.Lexemme))
+}
+
 func (scanner *LexicalAnalyzer) Initialize(source *bufio.Reader) {
+	scanner.stateManger = &dfa.DFAStatesManager{}
+	scanner.currentPos = &inputRunePosition{}
+
 	scanner.source = source
-	scanner.tokenDFA = preBuiltDFAs
-	scanner.lineNum = 0
-	scanner.lineOffset = 0
+	scanner.stateManger.Initialize()
+	scanner.currentPos.initialize()
 	scanner.lexemme = nil
 	scanner.lastInputExists = false
+	scanner.sustainCurrentInput = true
 }
-func (scanner *LexicalAnalyzer) resetDFAs() {
-	for _, token := range dfa.TokensList {
-		scanner.tokenDFA[token].Reset()
+func (scanner *LexicalAnalyzer) Reset() {
+	scanner.source = nil
+	scanner.stateManger.Reset()
+	scanner.currentPos.reset()
+	scanner.lexemme = nil
+	scanner.lastInputExists = false
+	scanner.sustainCurrentInput = true
+}
+
+func (scanner *LexicalAnalyzer) prepareForNextToken() {
+	if scanner.sustainCurrentInput {
+		scanner.stateManger.Reset()
+		scanner.lastInputExists = true
+		scanner.lexemme = scanner.lexemme[:1]
+		scanner.lexemme[0] = scanner.currentInput
+		return
 	}
+	scanner.stateManger.Reset()
+	scanner.lastInputExists = false
+	scanner.lexemme = nil
 }
-func (scanner *LexicalAnalyzer) ReadToken() (Token, error) {
+func (scanner *LexicalAnalyzer) ReadToken() (*Token, error) {
 	/*
 		This function reades one rune at a time from the source reader and returns 1 token at a time in return. It follows `maximal munching` methodlogy for settling tie between 2 valid token dfas being satisfied. And if both DFAs end up having the same token length then the token which is written later in the `dfa.TokensList` is given higher priority and is returned
 	*/
-	scanner.lexemme = nil // Resetting the lexemme to be stored
-
 	returnToken := Token{}
-	var input rune
 	var err error
-	var tokenLineNum uint32
-	var tokenLineOffset uint32
-	if scanner.lastInputExists {
-		tokenLineNum = scanner.lastInputLineNum
-		tokenLineOffset = scanner.lastInputLineOffset
-	} else {
-		tokenLineNum = scanner.lineNum
-		tokenLineOffset = scanner.lineOffset
-	}
+	tokenStartingLine := scanner.currentPos.lineNum
+	tokenStartingLineOffset := scanner.currentPos.lineOffset
 
-	tempResultStorage := make([]dfa.DfaReturn, len(dfa.TokensList))
-	for i := range dfa.TokensList {
-		tempResultStorage[i] = dfa.VALID
-	}
-
-	isAnyValid := false // For checking if any vlaid token was found in this run of this function's for loop.
-	isAnyIntermediate := false
-	var foundValidToken dfa.TokenType
-	var foundIntermediateToken dfa.TokenType
-
-	lastLoop_isAnyValid := false
-	lastLoop_isAnyIntermediate := false
-	var lastLoop_foundValidToken dfa.TokenType
-	var lastLoop_foundIntermediateToken dfa.TokenType
+	defer scanner.prepareForNextToken()
 
 	for i := 0; ; i++ {
 		// Read one rune from the source
-		if scanner.lastInputExists {
-			input = scanner.lastInput
-			scanner.lastInputExists = false
-		} else {
-			input, _, err = scanner.source.ReadRune()
+		if !scanner.lastInputExists {
+			scanner.currentInput, _, err = scanner.source.ReadRune()
 			if err != nil && err != io.EOF {
-				scanner.resetDFAs()
-				return returnToken, errorhandler.RetErr("", err)
+				scanner.sustainCurrentInput = false
+				return &returnToken, errorhandler.RetErr("", err)
 			}
 			if err == io.EOF {
-				scanner.resetDFAs()
+				scanner.sustainCurrentInput = false
 				// This is the end of the file so just wrap up your findings and return
 				if i == 0 {
 					// Users should run this function to get the EOF token even if internally in this function the EOF was reached in the last run
-					returnToken.SetTokenProperties(dfa.EOF, tokenLineNum, tokenLineOffset, []rune(string(dfa.EOF)))
-					// TODO: See if this lineNum and lineOffset is okay for not returning the eof
-					return returnToken, io.EOF
-				}
-
-				// Check if any valid token was found in the last iteration, if yes then we report it as our found token
-				if lastLoop_isAnyValid {
 					returnToken.SetTokenProperties(
-						lastLoop_foundValidToken,
-						tokenLineNum,
-						tokenLineOffset,
+						dfa.EOF,
+						tokenStartingLine,
+						tokenStartingLineOffset,
+						[]rune(string(dfa.EOF)),
+					)
+					// TODO: See if this lineNum and lineOffset is okay for not returning the eof
+					return &returnToken, io.EOF
+				}
+				// Check if any valid token was found in the last iteration, if yes then we report it as our found token
+				if scanner.stateManger.PreviousLoopDfaResults.IsAnyValidToken {
+					returnToken.SetTokenProperties(
+						scanner.stateManger.PreviousLoopDfaResults.ValidToken,
+						tokenStartingLine,
+						tokenStartingLineOffset,
 						scanner.lexemme,
 					)
-					return returnToken, nil
+					return &returnToken, nil
 				}
 				// If any intermediates were there then we will use those for error reporting
-				if lastLoop_isAnyIntermediate {
-					return returnToken, errorhandler.RetErr(
+				if scanner.stateManger.PreviousLoopDfaResults.IsAnyIntermediateToken {
+					return &returnToken, errorhandler.RetErr(
 						fmt.Sprintf(
 							"TokenError: invalid token found at line %v at offset %v, most resembling token type was %v",
-							tokenLineNum,
-							tokenLineOffset,
-							string(lastLoop_foundIntermediateToken),
+							tokenStartingLine,
+							tokenStartingLineOffset,
+							string(scanner.stateManger.PreviousLoopDfaResults.IntermediateToken),
 						),
 						nil,
 					)
 				}
-				// I do not expect the code to reach this line. Because, to reach here the last iteration of this function would have to have all Invalid tokens, and still decided to continue parsing. Which should'nt happen.
+				// I do not expect the code to reach this line. Because, to reach here the last iteration of this function's loop would have to have all Invalid tokens, and still decide to continue parsing. Which should'nt happen.
 				// Return error and not EOF token here, users can get the EOF token in the next run despite the error
-				return returnToken, errorhandler.RetErr(
-					fmt.Sprintf("TokenError: invalid token found at line %v at offset %v", scanner.lineNum, scanner.lineOffset-uint32(len(scanner.lexemme))),
+				return &returnToken, errorhandler.RetErr(
+					fmt.Sprintf("TokenError: invalid token found at line %v at offset %v", scanner.currentPos.lineNum, scanner.currentPos.lineOffset-uint32(len(scanner.lexemme))),
 					nil,
 				)
 			}
 			// Record the offsets and the lineNums in the scanner
-			scanner.lineOffset++
-			if input == '\n' {
-				scanner.lineNum++
-				scanner.prevLineOffset = scanner.lineOffset - 1
-				scanner.lineOffset = 0
-			}
+			scanner.currentPos.step(scanner.currentInput)
 		}
-		scanner.lexemme = append(scanner.lexemme, input)
+		scanner.lexemme = append(scanner.lexemme, scanner.currentInput)
 
-		// TODO: This loop can be done concurrently, and that should speed up the processing speed by a lot.
-		// Execute a step in all the dfas with the current rune.
-		for i := 0; i < len(dfa.TokensList); i++ { // The token written after in the order of dfa.TokensList will get higher priority
-			if tempResultStorage[i] == dfa.INVALID {
-				continue
-			}
-			token := dfa.TokensList[i]
-			dfaForToken := scanner.tokenDFA[token]
-			dfa_result := dfaForToken.Step(input)
-			tempResultStorage[i] = dfa_result
-			if dfa_result.IsValid() {
-				isAnyValid = true
-				foundValidToken = token
-			}
-			if dfa_result.IsIntermediate() {
-				isAnyIntermediate = true
-				foundIntermediateToken = token
-			}
-		}
+		// # The part where the actual stepping in the DFAs is taking place
+		scanner.stateManger.Step(scanner.currentInput)
 
 		// Stop iterating if all the DFAs are yielding INVALID
-		if !isAnyValid && !isAnyIntermediate {
-			scanner.lastInputExists = true
-			scanner.lastInput = input
-			if scanner.lineOffset == 0 {
-				scanner.lastInputLineNum = scanner.lineNum - 1
-				scanner.lastInputLineOffset = scanner.prevLineOffset
-			} else {
-				scanner.lastInputLineNum = scanner.lineNum
-				scanner.lastInputLineOffset = scanner.lineOffset - 1
-			}
-			scanner.resetDFAs()
+		if scanner.stateManger.CurrentLoopDfaResults.AreAllInvalid() {
+			scanner.sustainCurrentInput = true
 			// Check if any valid token was found in the last iteration, if yes then we report it as our found token
-			if lastLoop_isAnyValid {
+			if scanner.stateManger.PreviousLoopDfaResults.IsAnyValidToken {
 				returnToken.SetTokenProperties(
-					lastLoop_foundValidToken,
-					tokenLineNum,
-					tokenLineOffset,
+					scanner.stateManger.PreviousLoopDfaResults.ValidToken,
+					tokenStartingLine,
+					tokenStartingLineOffset,
 					scanner.lexemme[:len(scanner.lexemme)-1], // We remove the last rune which was not valid
 				)
-				return returnToken, nil
+				return &returnToken, nil
 			}
 			// If any intermediates were there then we will use those for error reporting
-			if lastLoop_isAnyIntermediate {
-				return returnToken, errorhandler.RetErr(
+			if scanner.stateManger.PreviousLoopDfaResults.IsAnyIntermediateToken {
+				return &returnToken, errorhandler.RetErr(
 					fmt.Sprintf(
 						"TokenError: invalid token found at line %v at offset %v, most resembling token type was %v",
-						tokenLineNum,
-						tokenLineOffset,
-						string(lastLoop_foundIntermediateToken),
+						tokenStartingLine,
+						tokenStartingLineOffset,
+						string(scanner.stateManger.PreviousLoopDfaResults.IntermediateToken),
 					),
 					nil,
 				)
 			}
 			// The Program Counter can only get here if this is the 1st iteration and the very 1st rune did not satisfay any of the token types' dfa
 			scanner.lastInputExists = false
-			return returnToken, errorhandler.RetErr(
-				fmt.Sprintf("TokenError: invalid token found at line %v at offset %v", tokenLineNum, tokenLineOffset),
+			return &returnToken, errorhandler.RetErr(
+				fmt.Sprintf("TokenError: invalid token found at line %v at offset %v", tokenStartingLine, tokenStartingLineOffset),
 				nil,
 			)
 		}
-
-		// Set this loop important values in the lastLoop variables
-		lastLoop_isAnyValid = isAnyValid
-		lastLoop_isAnyIntermediate = isAnyIntermediate
-		lastLoop_foundValidToken = foundValidToken
-		lastLoop_foundIntermediateToken = foundIntermediateToken
-
-		// Reset variables (which need it) outside of the loop
-		isAnyValid = false
-		isAnyIntermediate = false
 	}
-}
-func (scanner *LexicalAnalyzer) Reset() {
-	scanner.source = nil
-	scanner.resetDFAs()
-	scanner.lineNum = 0
-	scanner.lineOffset = 0
-	scanner.lexemme = nil
-	scanner.lastInputExists = false
 }

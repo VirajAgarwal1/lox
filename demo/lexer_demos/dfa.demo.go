@@ -18,7 +18,7 @@ const (
 	Bold   = "\033[1m"
 )
 
-func colorByState(state dfa.DfaReturn) string {
+func colorByState(state dfa.DfaResult) string {
 	switch state {
 	case dfa.INVALID:
 		return Red + "✗"
