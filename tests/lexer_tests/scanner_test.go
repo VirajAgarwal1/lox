@@ -690,3 +690,5 @@ func BenchmarkScanner(b *testing.B) {
 		scanner.Reset()
 	}
 }
+
+// TODO: Add a test case for checking if the scanner works even if the ReadToken function is called after the EOF is reached

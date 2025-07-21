@@ -12,7 +12,19 @@ import (
 /*
 	The order of conversion is this:
 		Bytes -> Runes -> Lexemes -> Tokens
+
+	*NOTE*:
+	We need this lastInput fields (in the LexicalAnalyzer type) because when the dfas detect a valid token, the scanner needs to consume one more rune, which will make all the dfas return invalid. And then the token is returned. But, this process consumes a rune whiich didn't belong to the previous token, and so we save it and reuse it in the next time the token reader function is called. Yes, this does mean that the procesing of a starting rune of each token is done TWICE. The fix is easy by adding the processing info in the struct as well... But, if I add it right now that can mess up the code a lot.
+
+	^ This might also potentially need changing some things in the dfa package, because I have not exposed a way to start each DFA on some particular state or even a way to save all the dfas state in an easy to do manner.
+
+	So, the twice execution problem is here to stay for now, But I'll still put a todo. ->
+	TODO: Fix the problem inefficiency of the 1st rune of a tokken going through all the lexemmes DFAs twice.
+
+	TODO: Setup a new struct here which will have the lastInput properties along with the dfa tokens
 */
+
+var preBuiltDFAs = dfa.GenerateDFAs() // Pre-computing it here so that the Lexical Scanner can work with multiple inputs in quick succession without needing to compute the DFAs for lexemmes again.
 
 type Token struct {
 	TypeOfToken dfa.TokenType
@@ -20,21 +32,6 @@ type Token struct {
 	Line        uint32
 	Offset      uint32
 }
-
-func (t *Token) SetTokenProperties(_type dfa.TokenType, _lineNum uint32, _offset uint32, _lexemme []rune) {
-	t.TypeOfToken = _type
-	t.Line = _lineNum
-	t.Offset = _offset
-	t.Lexemme = _lexemme
-}
-
-func (t *Token) ToString() string {
-	return fmt.Sprintf("|%d|%d| [%s]Token -> `%s`", t.Line, t.Offset, string(t.TypeOfToken), string(t.Lexemme))
-}
-
-// TODO: Setup a new struct here which will have the lastInput properties along with the dfa tokens
-var sharedDFAs = dfa.GenerateDFAs() // Pre-computing it here so that the Lexical Scanner can work with multiple inputs in quick succession without needing to compute the DFAs for lexemmes again.
-
 type LexicalAnalyzer struct {
 	source              *bufio.Reader
 	tokenDFA            map[dfa.TokenType]dfa.DFA
@@ -48,28 +45,32 @@ type LexicalAnalyzer struct {
 	lastInputLineOffset uint32
 }
 
-// *NOTE: We need this lastInput fields because when the dfas detect a valid token, the scanner needs to consume one more rune, which will make all the dfas return invalid. And then the token is returned. But, this process consumes a rune whiich didn't belong to the previous token, and so we save it and reuse it in the next time the token reader function is called. Yes, this does mean that the procesing of a starting rune of each token is done TWICE. The fix is easy by adding the processing info in the struct as well... But, if I add it right now that can mess up the code a lot.
-// ^ This might also potentially need changing some things in the dfa package, because I have not exposed a way to start each DFA on some particular state or even a way to save all the dfas state in an easy to do manner.
-// So, the twice execution problem is here to stay for now, But I'll still put a todo. ->
-// TODO: Fix the problem inefficiency of the 1st rune of a tokken going through all the lexemmes DFAs twice.
-
+func (t *Token) SetTokenProperties(_type dfa.TokenType, _lineNum uint32, _offset uint32, _lexemme []rune) {
+	t.TypeOfToken = _type
+	t.Line = _lineNum
+	t.Offset = _offset
+	t.Lexemme = _lexemme
+}
+func (t *Token) ToString() string {
+	return fmt.Sprintf("|%d|%d| [%s]Token -> `%s`", t.Line, t.Offset, string(t.TypeOfToken), string(t.Lexemme))
+}
 func (scanner *LexicalAnalyzer) Initialize(source *bufio.Reader) {
 	scanner.source = source
-	scanner.tokenDFA = sharedDFAs
+	scanner.tokenDFA = preBuiltDFAs
 	scanner.lineNum = 0
 	scanner.lineOffset = 0
 	scanner.lexemme = nil
 	scanner.lastInputExists = false
 }
-
 func (scanner *LexicalAnalyzer) resetDFAs() {
 	for _, token := range dfa.TokensList {
 		scanner.tokenDFA[token].Reset()
 	}
 }
-
-// This function reades one rune at a time from the source reader and returns 1 token at a time in return. It follows `maximal munching` methodlogy for settling tie between 2 valid token dfas being satisfied. And if both DFAs end up having the same token length then the token which is written later in the `dfa.TokensList` is given higher priority and is returned
 func (scanner *LexicalAnalyzer) ReadToken() (Token, error) {
+	/*
+		This function reades one rune at a time from the source reader and returns 1 token at a time in return. It follows `maximal munching` methodlogy for settling tie between 2 valid token dfas being satisfied. And if both DFAs end up having the same token length then the token which is written later in the `dfa.TokensList` is given higher priority and is returned
+	*/
 	scanner.lexemme = nil // Resetting the lexemme to be stored
 
 	returnToken := Token{}
@@ -233,7 +234,6 @@ func (scanner *LexicalAnalyzer) ReadToken() (Token, error) {
 		isAnyIntermediate = false
 	}
 }
-
 func (scanner *LexicalAnalyzer) Reset() {
 	scanner.source = nil
 	scanner.resetDFAs()
