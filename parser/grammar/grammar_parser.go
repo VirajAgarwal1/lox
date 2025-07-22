@@ -2,7 +2,7 @@
 This file is responsible for generating the code for the Lox grammar. This is needed because manually writing code for the whole grammar wil become tedious
 */
 
-package parser
+package grammar
 
 import (
 	"bufio"
@@ -15,22 +15,8 @@ import (
 	"github.com/VirajAgarwal1/lox/lexer/dfa"
 )
 
-type stack_type []generic_grammar_term
-
-func (st *stack_type) add(elem generic_grammar_term) {
-	*st = append(*st, elem)
-}
-func (st *stack_type) pop() generic_grammar_term {
-	if len(*st) == 0 {
-		return nil
-	}
-	out := (*st)[len(*st)-1]
-	*st = (*st)[:(len(*st) - 1)]
-	return out
-}
-func (st *stack_type) peek() generic_grammar_term {
-	return (*st)[len(*st)-1]
-}
+var stack stack_type
+var GrammarRules = make(map[non_terminal]([]generic_grammar_term))
 
 // This interface actually is used to refer to all the types' pointers.
 type generic_grammar_term interface {
@@ -43,8 +29,6 @@ type non_terminal struct {
 	name string
 }
 type or struct {
-	left  generic_grammar_term
-	right generic_grammar_term
 }
 type star struct {
 	content generic_grammar_term
@@ -56,6 +40,7 @@ type bracket struct {
 	contents []generic_grammar_term
 	is_left  bool
 }
+type stack_type []generic_grammar_term
 
 func (t *terminal) get_grammar_term_type() string {
 	return "terminal"
@@ -75,9 +60,20 @@ func (t *plus) get_grammar_term_type() string {
 func (t *bracket) get_grammar_term_type() string {
 	return "bracket"
 }
-
-var stack stack_type
-var GrammarRules = make(map[non_terminal]([]generic_grammar_term))
+func (st *stack_type) add(elem generic_grammar_term) {
+	*st = append(*st, elem)
+}
+func (st *stack_type) pop() generic_grammar_term {
+	if len(*st) == 0 {
+		return nil
+	}
+	out := (*st)[len(*st)-1]
+	*st = (*st)[:(len(*st) - 1)]
+	return out
+}
+func (st *stack_type) peek() generic_grammar_term {
+	return (*st)[len(*st)-1]
+}
 
 func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 
@@ -197,7 +193,7 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '*' cannot have a open bracket right before itself", nil))
 				return
 			}
-			if prev_elem.get_grammar_term_type() == "or" && prev_elem.(*or).right == nil {
+			if prev_elem.get_grammar_term_type() == "or" {
 				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '*' cannot have the 'or` operator right before itself", nil))
 				return
 			}
@@ -217,7 +213,7 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '+' cannot have a open bracket right before itself", nil))
 				return
 			}
-			if prev_elem.get_grammar_term_type() == "or" && prev_elem.(*or).right == nil {
+			if prev_elem.get_grammar_term_type() == "or" {
 				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '+' cannot have the 'or` operator right before itself", nil))
 				return
 			}
@@ -251,5 +247,4 @@ func Grammar_parser() {
 	scanner := lexer.LexicalAnalyzer{}
 	scanner.Initialize(buf_file_reader)
 	processGrammarDefinition(scanner)
-	return
 }

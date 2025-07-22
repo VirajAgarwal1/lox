@@ -106,17 +106,17 @@ import (
 	lexer_demos "github.com/VirajAgarwal1/lox/demo/lexer_demos"
 )
 
-func main() {
+	func main() {
 	lexer_demos.ScannerDemo()
-}
+	}
 */
 
 package main
 
 import (
-	parser "github.com/VirajAgarwal1/lox/parser"
+	grammar "github.com/VirajAgarwal1/lox/parser/grammar"
 )
 
 func main() {
-	parser.Grammar_parser()
+	grammar.Grammar_parser()
 }

@@ -6,4 +6,4 @@ comparison -> term ( ( ">" or ">=" or "<" or "<=" ) term )*
 term -> factor ( ( "-" or "+" ) factor )*
 factor -> unary ( ( "/" or "*" ) unary )*
 unary -> ( "!" or "-" ) unary or primary 
-primary -> "NUMBER" or "STRING" or "TRUE" or "FALSE" or "NIL" or "(" expression ")"
+primary -> "NUMBER" or "STRING" or "true" or "false" or "nil" or "(" expression ")"
