@@ -1,6 +1,9 @@
 package lexer
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+)
 
 type BufferedLexicalAnalyzer struct {
 	buffer [3]struct {
@@ -14,8 +17,10 @@ type BufferedLexicalAnalyzer struct {
 	scanner *LexicalAnalyzer
 }
 
-func (b *BufferedLexicalAnalyzer) Initialize(scanner *LexicalAnalyzer) {
-	b.scanner = scanner
+func (b *BufferedLexicalAnalyzer) Initialize(source *bufio.Reader) {
+	scanner := LexicalAnalyzer{}
+	scanner.Initialize(source)
+	b.scanner = &scanner
 
 	b.prev_i = 0
 	b.cur_i = 1

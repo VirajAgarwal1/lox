@@ -41,10 +41,8 @@ func printAST(node parser.Node, depth int) {
 func ParserDemo() {
 	// Sample input:  42, "hello", true
 	sample_input := bufio.NewReader(strings.NewReader("42,\"hello\",true,identifier,false,2.89"))
-	scanner := lexer.LexicalAnalyzer{}
-	scanner.Initialize(sample_input)
 	buf_scanner := lexer.BufferedLexicalAnalyzer{}
-	buf_scanner.Initialize(&scanner)
+	buf_scanner.Initialize(sample_input)
 
 	// Run the parser
 	ast, err := parser.Parse_expression(&buf_scanner)
