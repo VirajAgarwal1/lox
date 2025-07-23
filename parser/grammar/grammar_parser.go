@@ -23,7 +23,7 @@ type generic_grammar_term interface {
 	get_grammar_term_type() string
 }
 type terminal struct {
-	content *([]rune)
+	content []rune
 }
 type non_terminal struct {
 	name string
@@ -158,10 +158,7 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 		}
 		if token.TypeOfToken == dfa.RIGHT_PAREN {
 			i := len(stack) - 1
-			for {
-				if i < 0 {
-					break
-				}
+			for i >= 0 {
 				if stack[i].get_grammar_term_type() == "bracket" {
 					if stack[i].(*bracket).is_left {
 						break
@@ -230,7 +227,7 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 		}
 		if token.TypeOfToken == dfa.STRING {
 			new_terminal := terminal{}
-			new_terminal.content = &token.Lexemme
+			new_terminal.content = token.Lexemme[1 : len(token.Lexemme)-1] // Excluding the apostrophies from the sides
 			stack.add(&new_terminal)
 			continue
 		}

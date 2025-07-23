@@ -98,19 +98,19 @@
 // 	}
 // }
 
-/*
 // DEMO CODE
 package main
 
 import (
-	lexer_demos "github.com/VirajAgarwal1/lox/demo/lexer_demos"
+	"github.com/VirajAgarwal1/lox/demo/parser_demos"
 )
 
-	func main() {
-	lexer_demos.ScannerDemo()
-	}
-*/
+func main() {
+	parser_demos.ParserDemo()
+}
 
+/*
+// Parsing grammar code
 package main
 
 import (
@@ -120,3 +120,4 @@ import (
 func main() {
 	grammar.Grammar_parser()
 }
+*/
