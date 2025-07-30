@@ -106,7 +106,7 @@ import (
 )
 
 func main() {
-	parser_demos.ParserDemo()
+	parser_demos.WriteGrammarParserDemo()
 }
 
 /*

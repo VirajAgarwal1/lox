@@ -5,23 +5,18 @@ This file is responsible for generating the code for the Lox grammar. This is ne
 package grammar
 
 import (
-	"bufio"
-	"fmt"
 	"io"
-	"os"
 
 	"github.com/VirajAgarwal1/lox/errorhandler"
 	"github.com/VirajAgarwal1/lox/lexer"
 	"github.com/VirajAgarwal1/lox/lexer/dfa"
 )
 
-var stack stack_type
-var GrammarRules = make(map[non_terminal]([]generic_grammar_term))
-
 // This interface actually is used to refer to all the types' pointers.
 type generic_grammar_term interface {
 	get_grammar_term_type() string
 }
+
 type terminal struct {
 	content []rune
 }
@@ -75,16 +70,17 @@ func (st *stack_type) peek() generic_grammar_term {
 	return (*st)[len(*st)-1]
 }
 
-func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
+func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[non_terminal]([]generic_grammar_term), error) {
 
 	i := -1
 	current_non_terminal := non_terminal{}
+	var stack stack_type
+	var GrammarRules = make(map[non_terminal]([]generic_grammar_term))
 
 	for {
 		token, err := scanner.ReadToken()
 		if err != nil && err != io.EOF {
-			fmt.Print(errorhandler.RetErr("Inavlid Grammar: token not recognized", nil))
-			return
+			return GrammarRules, errorhandler.RetErr("Inavlid Grammar: token not recognized", err)
 		}
 		if err == io.EOF {
 			if current_non_terminal.name != "" {
@@ -95,10 +91,8 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 				GrammarRules[current_non_terminal] = new_non_terminal_def
 			}
 			stack = nil
-			return
+			return GrammarRules, err
 		}
-
-		fmt.Println(token)
 
 		if token.TypeOfToken == dfa.WHITESPACE {
 			continue
@@ -125,21 +119,18 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 		case 0:
 			// We are the starting of a new line
 			if token.TypeOfToken != dfa.IDENTIFIER {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: left expression missing", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: left expression missing", nil)
 			}
 			current_non_terminal.name = string(token.Lexemme)
 			continue
 		case 1:
 			if token.TypeOfToken != dfa.MINUS {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: separator (->) is missing", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: separator (->) is missing", nil)
 			}
 			continue
 		case 2:
 			if token.TypeOfToken != dfa.GREATER {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: separator (->) is missing", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: separator (->) is missing", nil)
 			}
 			continue
 		}
@@ -167,8 +158,7 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 				i--
 			}
 			if i < 0 {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: no matching left bracket found for the right bracket", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: no matching left bracket found for the right bracket", nil)
 			}
 			// Take all the elems out from the stack from this index and place them in the new bracket
 			close_bracket := bracket{}
@@ -182,17 +172,14 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 		}
 		if token.TypeOfToken == dfa.STAR {
 			if len(stack) < 1 {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '*' needs an element before itself to function", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '*' needs an element before itself to function", nil)
 			}
 			prev_elem := stack.peek()
 			if prev_elem.get_grammar_term_type() == "bracket" && prev_elem.(*bracket).is_left {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '*' cannot have a open bracket right before itself", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '*' cannot have a open bracket right before itself", nil)
 			}
 			if prev_elem.get_grammar_term_type() == "or" {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '*' cannot have the 'or` operator right before itself", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '*' cannot have the 'or` operator right before itself", nil)
 			}
 			prev_elem = stack.pop()
 			new_star := star{}
@@ -202,17 +189,14 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 		}
 		if token.TypeOfToken == dfa.PLUS {
 			if len(stack) < 1 {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '+' needs an element before itself to function", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '+' needs an element before itself to function", nil)
 			}
 			prev_elem := stack.peek()
 			if prev_elem.get_grammar_term_type() == "bracket" && prev_elem.(*bracket).is_left {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '+' cannot have a open bracket right before itself", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '+' cannot have a open bracket right before itself", nil)
 			}
 			if prev_elem.get_grammar_term_type() == "or" {
-				fmt.Print(errorhandler.RetErr("Inavlid Grammar: '+' cannot have the 'or` operator right before itself", nil))
-				return
+				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '+' cannot have the 'or` operator right before itself", nil)
 			}
 			prev_elem = stack.pop()
 			new_plus := plus{}
@@ -232,16 +216,4 @@ func processGrammarDefinition(scanner lexer.LexicalAnalyzer) {
 			continue
 		}
 	}
-}
-
-func Grammar_parser() {
-	file_reader, err := os.Open("parser/lox.grammar")
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
-	buf_file_reader := bufio.NewReader(file_reader)
-	scanner := lexer.LexicalAnalyzer{}
-	scanner.Initialize(buf_file_reader)
-	processGrammarDefinition(scanner)
 }
