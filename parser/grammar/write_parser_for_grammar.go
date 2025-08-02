@@ -3,7 +3,6 @@ package grammar
 import (
 	"bufio"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/VirajAgarwal1/lox/errorhandler"
@@ -61,7 +60,7 @@ var TokenStringToType = map[string]string{
 	"while":  "dfa.WHILE",
 }
 
-func writeStructsForNonTerminals(writer *bufio.Writer, processedGrammar map[non_terminal]([]generic_grammar_term)) error {
+func WriteStructsForNonTerminals(writer *bufio.Writer, processedGrammar map[Non_terminal]([]Generic_grammar_term)) error {
 
 	getStringForNonTerminal := func(symbol string) string {
 		output := `type Grammar_` + symbol + ` struct {
@@ -72,7 +71,7 @@ func writeStructsForNonTerminals(writer *bufio.Writer, processedGrammar map[non_
 	}
 
 	for nonTerminalSymbol := range processedGrammar {
-		_, err := writer.WriteString(getStringForNonTerminal(nonTerminalSymbol.name))
+		_, err := writer.WriteString(getStringForNonTerminal(nonTerminalSymbol.Name))
 		if err != nil {
 			return errorhandler.RetErr("", err)
 		}
@@ -87,7 +86,7 @@ func writeStructsForNonTerminals(writer *bufio.Writer, processedGrammar map[non_
 	return nil
 }
 
-func writeEvaluateMethodsForNonTerminals(writer *bufio.Writer, processedGrammar map[non_terminal]([]generic_grammar_term)) error {
+func WriteEvaluateMethodsForNonTerminals(writer *bufio.Writer, processedGrammar map[Non_terminal]([]Generic_grammar_term)) error {
 
 	getStringForNonTerminal := func(symbol string) string {
 		output := `func (non_terminal *Grammar_` + symbol + `) Evaluate() *Value {
@@ -98,7 +97,7 @@ func writeEvaluateMethodsForNonTerminals(writer *bufio.Writer, processedGrammar 
 	}
 
 	for nonTerminalSymbol := range processedGrammar {
-		_, err := writer.WriteString(getStringForNonTerminal(nonTerminalSymbol.name))
+		_, err := writer.WriteString(getStringForNonTerminal(nonTerminalSymbol.Name))
 		if err != nil {
 			return errorhandler.RetErr("", err)
 		}
@@ -113,15 +112,19 @@ func writeEvaluateMethodsForNonTerminals(writer *bufio.Writer, processedGrammar 
 	return nil
 }
 
-func writeParseFunctionsForNonTerminals(writer *bufio.Writer, processedGrammar map[non_terminal]([]generic_grammar_term)) error {
+func WriteParseFunctionsForNonTerminals(writer *bufio.Writer, processedGrammar map[Non_terminal]([]Generic_grammar_term)) error {
 
-	getStringForNonTerminal := func(nonTerminalSymbol non_terminal, processedGrammar map[non_terminal]([]generic_grammar_term)) string {
-		output := `func Parse_` + nonTerminalSymbol.name + `(buf *lexer.BufferedLexicalAnalyzer) (Node, bool, error) {
-	output := Grammar_` + nonTerminalSymbol.name + `{}
-
-` + indentLines(generateDescriptionCode(processedGrammar[nonTerminalSymbol]), 1) + `
-
-	return &output, true, nil
+	getStringForNonTerminal := func(nonTerminalSymbol Non_terminal, processedGrammar map[Non_terminal]([]Generic_grammar_term)) string {
+		output := `func Parse_` + nonTerminalSymbol.Name + `(buf *lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+	output := Grammar_` + nonTerminalSymbol.Name + `{}
+	
+	args, ok, err := ` + GenerateDescriptionCode(processedGrammar[nonTerminalSymbol], "(buf)") + `
+	
+	output.Arguments = args
+	if err != nil || !ok {
+		return nil, false, err
+	}
+	return []Node{&output}, true, nil
 }
 `
 		return output
@@ -147,17 +150,17 @@ func writeParseFunctionsForNonTerminals(writer *bufio.Writer, processedGrammar m
 // Functions which help in writing code in recursive fashion for the grammar
 // -----------------------------------------------------------------------------------
 
-func detectOrInDescription(description []generic_grammar_term) []uint32 {
-	out := make([]uint32, len(description)/4)
+func DetectOrInDescription(description []Generic_grammar_term) []uint32 {
+	out := make([]uint32, 0, len(description)/4)
 	for i, term := range description {
-		if term.get_grammar_term_type() == "or" {
+		if term.Get_grammar_term_type() == "or" {
 			out = append(out, uint32(i))
 		}
 	}
 	return out
 }
 
-func indentLines(input string, indentLevel int) string {
+func IndentLines(input string, indentLevel int) string {
 	indent := ""
 	for i := 0; i < indentLevel; i++ {
 		indent += "\t"
@@ -173,150 +176,92 @@ func indentLines(input string, indentLevel int) string {
 	return strings.Join(lines, "\n")
 }
 
-func generateMatchCode(term terminal, isNotOkayIfCodeSegment string, isOkayIfCodeSegment string, outputStartIndex *uint32) string {
-
-	parsedTermNum := strconv.FormatUint(uint64(*outputStartIndex), 10)
-	(*outputStartIndex)++
-
-	output := ""
-
-	output += "parsedTerm" + parsedTermNum + ", isOk, err := match(buf, " + TokenStringToType[string(term.content)] + ")"
-
-	output += `
-if err != nil {
-	return &output, err
-}
-if !isOk {
-	` + isNotOkayIfCodeSegment + `
-}
-output.Arguments = append(output.Arguments, parsedTerm` + strconv.FormatUint(uint64(*outputStartIndex), 10) + `)
-` + isOkayIfCodeSegment + `
-`
-	return output
+func GetStringGeneratorForTerm(term Generic_grammar_term, endString string) string {
+	if term.Get_grammar_term_type() == "terminal" {
+		return GenerateMatchCode(*term.(*Terminal), endString)
+	}
+	if term.Get_grammar_term_type() == "non_terminal" {
+		return GenerateParseReturnCode(*term.(*Non_terminal), endString)
+	}
+	if term.Get_grammar_term_type() == "star" {
+		return GenerateStarCode(*term.(*Star), endString)
+	}
+	if term.Get_grammar_term_type() == "plus" {
+		return GeneratePlusCode(*term.(*Plus), endString)
+	}
+	if term.Get_grammar_term_type() == "bracket" {
+		return GenerateBracketCode(*term.(*Bracket), endString)
+	}
+	return ""
 }
 
-func generateParseReturnCode(term non_terminal, outputStartIndex *uint32, errorCodeSegment string, matchCodeSegment string) string {
-
-	parsedTermNum := strconv.FormatUint(uint64(*outputStartIndex), 10)
-	(*outputStartIndex)++
-
-	output := "parsedTerm" + parsedTermNum + ", err := Parse_" + term.name + "(buf)"
-	output += `
-if err != nil {
-	` + errorCodeSegment + `
-} else {
-	output.Arguments = append(output.Arguments, parsedTerm` + parsedTermNum + `)
-	` + matchCodeSegment + `
+func GenerateMatchCode(term Terminal, endString string) string {
+	return "matchToken(" + TokenStringToType[string(term.Content)] + ")" + endString
 }
-`
-
-	return output
+func GenerateParseReturnCode(term Non_terminal, endString string) string {
+	return "Parse_" + term.Name + endString
 }
-
-func generateStarCode(star_term star, outputStartIndex *uint32) string {
-	output := "for {\n"
-
-	if star_term.content.get_grammar_term_type() == "terminal" {
-		output += indentLines(
-			generateMatchCode(
-				*star_term.content.(*terminal), "break", "", outputStartIndex,
-			),
-			1,
-		)
+func GenerateStarCode(star_term Star, endString string) string {
+	return "zeroOrMore(\n" + GenerateDescriptionCode([]Generic_grammar_term{star_term.Content}, ",\n") + ")" + endString
+}
+func GeneratePlusCode(plus_term Plus, endString string) string {
+	return "oneOrMore(\n" + GenerateDescriptionCode([]Generic_grammar_term{plus_term.Content}, ",\n") + ")" + endString
+}
+func GenerateBracketCode(bracket_term Bracket, endString string) string {
+	if len(bracket_term.Contents) == 0 {
+		return ""
 	}
-	if star_term.content.get_grammar_term_type() == "non_terminal" {
-		output += indentLines(
-			generateParseReturnCode(
-				*star_term.content.(*non_terminal), outputStartIndex, "break",
-			),
-			1,
-		)
-	}
-	if star_term.content.get_grammar_term_type() == "star" {
-		output = generateStarCode(*star_term.content.(*star), outputStartIndex)
-		return output
-	}
-	if star_term.content.get_grammar_term_type() == "plus" {
-		bypassPlusOperator := star{}
-		bypassPlusOperator.content = star_term.content.(*plus).content
-		output = generateStarCode(bypassPlusOperator, outputStartIndex)
-		return output
-	}
-	if star_term.content.get_grammar_term_type() == "bracket" {
-		output += indentLines(
-			generateBracketCode(*star_term.content.(*bracket), outputStartIndex, true),
-			1,
-		)
-	}
-
-	output += "}\n"
-	return output
+	return GenerateDescriptionCode(bracket_term.Contents, endString)
 }
 
-func generateBracketCode(bracket_term bracket, outputStartIndex *uint32, isPartOfStarOrPLus bool) string {
-
-	// Detect if there is an `or` in the description
-	orPositions := detectOrInDescription(bracket_term.contents)
-	if len(orPositions) == 0 {
-		// All the terms in the description will concatenate
-
-	}
-
-	output := ""
-
-	for i := 0; i < len(bracket_term.contents); i++ {
-		if i == 0 && isPartOfStarOrPLus {
-			if bracket_term.contents[i].get_grammar_term_type() == "terminal" {
-				output += indentLines(
-					generateMatchCode(*bracket_term.contents[i].(*terminal), false, "break", outputStartIndex),
-					1,
-				)
-			}
-		}
-	}
-	return output
-}
-
-func generateDescriptionCode(description []generic_grammar_term, outputStartIndex *uint32, isPartOfBiggerOr bool, returnCodeBlock string) string {
+func GenerateDescriptionCode(description []Generic_grammar_term, endString string) string {
 	// This will be a recursive function
 	if len(description) == 0 {
 		return ""
 	}
-	output := ""
 
-	// Detect if there is an `or` in the description
-	orPositions := detectOrInDescription(description)
+	orPositions := DetectOrInDescription(description)
 	if len(orPositions) != 0 {
-		// All the terms in the description will concatenate
-		for i := 0; i < len(orPositions); i++ {
-			if i == 0 {
-				output += generateDescriptionCode(
-					description[0:orPositions[i]],
-					outputStartIndex,
-					true,
-					returnCodeBlock,
-				)
-				continue
+		output := "choice(\n"
+
+		start := uint32(0)
+		end := orPositions[0]
+		output += IndentLines(
+			GenerateDescriptionCode(
+				description[start:end],
+				",\n",
+			),
+			1,
+		)
+		for i := range orPositions {
+			start = orPositions[i] + 1
+			if i == len(orPositions)-1 {
+				end = uint32(len(description))
+			} else {
+				end = orPositions[i+1]
 			}
-			output += generateDescriptionCode(
-				description[orPositions[i-1]:orPositions[i]],
-				outputStartIndex,
-				true,
-				returnCodeBlock,
+			output += IndentLines(
+				GenerateDescriptionCode(
+					description[start:end],
+					",\n",
+				),
+				1,
 			)
 		}
 
+		output += ")" + endString
 		return output
 	}
 
-	for i := 0; i < len(description); i++ {
-		term := description[i]
-
-		if term.get_grammar_term_type() == "terminal" {
-			output += generateMatchCode(*term.(*terminal), returnCodeBlock, "", outputStartIndex)
-		}
+	if len(description) == 1 {
+		return GetStringGeneratorForTerm(description[0], endString)
 	}
 
+	output := "sequence(\n"
+	for i := 0; i < len(description); i++ {
+		output += GetStringGeneratorForTerm(description[i], ",\n")
+	}
+	output += ")" + endString
 	return output
 }
 
@@ -324,7 +269,7 @@ func generateDescriptionCode(description []generic_grammar_term, outputStartInde
 // Main Function which orchestrates the dance of all the other functions in this file
 // -----------------------------------------------------------------------------------
 
-func generateGrammarOutput(writer *bufio.Writer, processedGrammar map[non_terminal]([]generic_grammar_term)) error {
+func GenerateGrammarOutput(writer *bufio.Writer, processedGrammar map[Non_terminal]([]Generic_grammar_term)) error {
 
 	// Writing function and strcuts which are independant of the grammar
 	_, err := writer.WriteString(
@@ -335,10 +280,8 @@ func generateGrammarOutput(writer *bufio.Writer, processedGrammar map[non_termin
 package parser
 
 import (
-	"fmt"
 	"io"
 
-	"github.com/VirajAgarwal1/lox/errorhandler"
 	"github.com/VirajAgarwal1/lox/lexer"
 	"github.com/VirajAgarwal1/lox/lexer/dfa"
 )
@@ -360,20 +303,7 @@ func (non_terminal *Literal) Evaluate() *Value {
 		Inner:   non_terminal.Value.Lexemme,
 	}
 }
-func match(buf_scanner *lexer.BufferedLexicalAnalyzer, token dfa.TokenType) (Node, bool, error) {
-	t, err := buf_scanner.CurrentTokenWithoutConsume()
-	if err != nil && err != io.EOF {
-		return nil, false, errorhandler.RetErr("", err)
-	}
-	if t.TypeOfToken == token {
-		buf_scanner.ConsumeOneToken()
-		literal_value := Literal{
-			Value: t,
-		}
-		return &literal_value, true, nil
-	}
-	return nil, false, nil
-}
+
 func determineLoxType(tok *lexer.Token) string {
 	if tok.TypeOfToken == dfa.NUMBER {
 		return "number"
@@ -390,6 +320,85 @@ func determineLoxType(tok *lexer.Token) string {
 	return string(tok.TypeOfToken)
 }
 
+// -------------------- COMBINATOR HELPERS --------------------
+
+func matchToken(t dfa.TokenType) func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+	return func(buf *lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+		tok, err := buf.CurrentTokenWithoutConsume()
+		if err != nil && err != io.EOF {
+			return nil, false, err
+		}
+		if tok.TypeOfToken == t {
+			buf.ConsumeOneToken()
+			return []Node{&Literal{tok}}, true, nil
+		}
+		return nil, false, nil
+		// fmt.Errorf("Unexpected token '%v' found at line %d, offset %d. Expected token '%v'", string(tok.TypeOfToken), tok.Line, tok.Offset, string(t))
+	}
+}
+
+func sequence(parts ...func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error)) func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+	return func(buf *lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+		output := []Node{}
+		for _, part := range parts {
+			nodes, ok, err := part(buf)
+			if err != nil || !ok {
+				return nil, false, err
+			}
+			output = append(output, nodes...)
+		}
+		return output, true, nil
+	}
+}
+
+func choice(parts ...func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error)) func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+	return func(buf *lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+		for _, part := range parts {
+			nodes, ok, err := part(buf)
+			if err != nil {
+				return nil, false, err
+			}
+			if ok {
+				return nodes, true, nil
+			}
+		}
+		return nil, false, nil
+	}
+}
+
+func zeroOrMore(part func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error)) func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+	return func(buf *lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+		output := []Node{}
+		for {
+			nodes, ok, err := part(buf)
+			if err != nil || !ok {
+				break
+			}
+			output = append(output, nodes...)
+		}
+		return output, true, nil
+	}
+}
+func oneOrMore(part func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error)) func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+	return func(buf *lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
+		output := []Node{}
+		nodes, ok, err := part(buf)
+		if err != nil || !ok {
+			return nil, false, err
+		}
+		output = append(output, nodes...)
+
+		for {
+			nodes, ok, err = part(buf)
+			if err != nil || !ok {
+				break
+			}
+			output = append(output, nodes...)
+		}
+		return output, true, nil
+	}
+}
+
 // -----------------------------------
 // CODE INDEPENDANT OF GRAMMAR END
 // -----------------------------------
@@ -401,19 +410,19 @@ func determineLoxType(tok *lexer.Token) string {
 	}
 
 	// Write the structs for each non-terminal symbol
-	err = writeStructsForNonTerminals(writer, processedGrammar)
+	err = WriteStructsForNonTerminals(writer, processedGrammar)
 	if err != nil {
 		return errorhandler.RetErr("", err)
 	}
 
 	// Write the Evaluate method on struct for each non-terminal symbol
-	err = writeEvaluateMethodsForNonTerminals(writer, processedGrammar)
+	err = WriteEvaluateMethodsForNonTerminals(writer, processedGrammar)
 	if err != nil {
 		return errorhandler.RetErr("", err)
 	}
 
 	// Write the Parsing functions for each non-terminal symbol
-	err = writeParseFunctionsForNonTerminals(writer, processedGrammar)
+	err = WriteParseFunctionsForNonTerminals(writer, processedGrammar)
 	if err != nil {
 		return errorhandler.RetErr("", err)
 	}
@@ -425,7 +434,7 @@ func determineLoxType(tok *lexer.Token) string {
 // Main Function which creates/edits the file
 // -----------------------------------------------------------------------------------
 
-func GenerateGrammarParserFile(processedGrammar map[non_terminal]([]generic_grammar_term), filePath string) error {
+func GenerateGrammarParserFile(processedGrammar map[Non_terminal]([]Generic_grammar_term), filePath string) error {
 	// Open the file with:
 	// - O_CREATE: create if not exists
 	// - O_TRUNC: clear the file first
@@ -440,7 +449,7 @@ func GenerateGrammarParserFile(processedGrammar map[non_terminal]([]generic_gram
 	writer := bufio.NewWriter(file)
 
 	// Take the processed grammar and output its parser to the file
-	err = generateGrammarOutput(writer, processedGrammar)
+	err = GenerateGrammarOutput(writer, processedGrammar)
 	if err != nil {
 		return errorhandler.RetErr("", err)
 	}

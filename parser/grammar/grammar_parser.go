@@ -13,52 +13,52 @@ import (
 )
 
 // This interface actually is used to refer to all the types' pointers.
-type generic_grammar_term interface {
-	get_grammar_term_type() string
+type Generic_grammar_term interface {
+	Get_grammar_term_type() string
 }
 
-type terminal struct {
-	content []rune
+type Terminal struct {
+	Content []rune
 }
-type non_terminal struct {
-	name string
+type Non_terminal struct {
+	Name string
 }
-type or struct {
+type Or struct {
 }
-type star struct {
-	content generic_grammar_term
+type Star struct {
+	Content Generic_grammar_term
 }
-type plus struct {
-	content generic_grammar_term
+type Plus struct {
+	Content Generic_grammar_term
 }
-type bracket struct {
-	contents []generic_grammar_term
-	is_left  bool
+type Bracket struct {
+	Contents []Generic_grammar_term
+	Is_left  bool
 }
-type stack_type []generic_grammar_term
+type Stack_type []Generic_grammar_term
 
-func (t *terminal) get_grammar_term_type() string {
+func (t *Terminal) Get_grammar_term_type() string {
 	return "terminal"
 }
-func (t *non_terminal) get_grammar_term_type() string {
+func (t *Non_terminal) Get_grammar_term_type() string {
 	return "non_terminal"
 }
-func (t *or) get_grammar_term_type() string {
+func (t *Or) Get_grammar_term_type() string {
 	return "or"
 }
-func (t *star) get_grammar_term_type() string {
+func (t *Star) Get_grammar_term_type() string {
 	return "star"
 }
-func (t *plus) get_grammar_term_type() string {
+func (t *Plus) Get_grammar_term_type() string {
 	return "plus"
 }
-func (t *bracket) get_grammar_term_type() string {
+func (t *Bracket) Get_grammar_term_type() string {
 	return "bracket"
 }
-func (st *stack_type) add(elem generic_grammar_term) {
+func (st *Stack_type) add(elem Generic_grammar_term) {
 	*st = append(*st, elem)
 }
-func (st *stack_type) pop() generic_grammar_term {
+func (st *Stack_type) pop() Generic_grammar_term {
 	if len(*st) == 0 {
 		return nil
 	}
@@ -66,16 +66,16 @@ func (st *stack_type) pop() generic_grammar_term {
 	*st = (*st)[:(len(*st) - 1)]
 	return out
 }
-func (st *stack_type) peek() generic_grammar_term {
+func (st *Stack_type) peek() Generic_grammar_term {
 	return (*st)[len(*st)-1]
 }
 
-func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[non_terminal]([]generic_grammar_term), error) {
+func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[Non_terminal]([]Generic_grammar_term), error) {
 
 	i := -1
-	current_non_terminal := non_terminal{}
-	var stack stack_type
-	var GrammarRules = make(map[non_terminal]([]generic_grammar_term))
+	current_non_terminal := Non_terminal{}
+	var stack Stack_type
+	var GrammarRules = make(map[Non_terminal]([]Generic_grammar_term))
 
 	for {
 		token, err := scanner.ReadToken()
@@ -83,8 +83,8 @@ func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[non_terminal]
 			return GrammarRules, errorhandler.RetErr("Inavlid Grammar: token not recognized", err)
 		}
 		if err == io.EOF {
-			if current_non_terminal.name != "" {
-				var new_non_terminal_def []generic_grammar_term
+			if current_non_terminal.Name != "" {
+				var new_non_terminal_def []Generic_grammar_term
 				for i := 0; i < len(stack); i++ {
 					new_non_terminal_def = append(new_non_terminal_def, stack[i])
 				}
@@ -101,8 +101,8 @@ func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[non_terminal]
 			continue
 		}
 		if token.TypeOfToken == dfa.NEWLINE {
-			if current_non_terminal.name != "" {
-				var new_non_terminal_def []generic_grammar_term
+			if current_non_terminal.Name != "" {
+				var new_non_terminal_def []Generic_grammar_term
 				for i := 0; i < len(stack); i++ {
 					new_non_terminal_def = append(new_non_terminal_def, stack[i])
 				}
@@ -121,7 +121,7 @@ func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[non_terminal]
 			if token.TypeOfToken != dfa.IDENTIFIER {
 				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: left expression missing", nil)
 			}
-			current_non_terminal.name = string(token.Lexemme)
+			current_non_terminal.Name = string(token.Lexemme)
 			continue
 		case 1:
 			if token.TypeOfToken != dfa.MINUS {
@@ -136,22 +136,22 @@ func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[non_terminal]
 		}
 
 		if token.TypeOfToken == dfa.IDENTIFIER {
-			arg := non_terminal{}
-			arg.name = string(token.Lexemme)
+			arg := Non_terminal{}
+			arg.Name = string(token.Lexemme)
 			stack.add(&arg)
 			continue
 		}
 		if token.TypeOfToken == dfa.LEFT_PAREN {
-			open_bracket := bracket{}
-			open_bracket.is_left = true
+			open_bracket := Bracket{}
+			open_bracket.Is_left = true
 			stack.add(&open_bracket)
 			continue
 		}
 		if token.TypeOfToken == dfa.RIGHT_PAREN {
 			i := len(stack) - 1
 			for i >= 0 {
-				if stack[i].get_grammar_term_type() == "bracket" {
-					if stack[i].(*bracket).is_left {
+				if stack[i].Get_grammar_term_type() == "bracket" {
+					if stack[i].(*Bracket).Is_left {
 						break
 					}
 				}
@@ -161,10 +161,10 @@ func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[non_terminal]
 				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: no matching left bracket found for the right bracket", nil)
 			}
 			// Take all the elems out from the stack from this index and place them in the new bracket
-			close_bracket := bracket{}
-			close_bracket.is_left = false
+			close_bracket := Bracket{}
+			close_bracket.Is_left = false
 			for j := i + 1; j < len(stack); j++ {
-				close_bracket.contents = append(close_bracket.contents, stack[j])
+				close_bracket.Contents = append(close_bracket.Contents, stack[j])
 			}
 			stack = stack[:i] // Remove all the other things from the stack
 			stack.add(&close_bracket)
@@ -175,15 +175,15 @@ func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[non_terminal]
 				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '*' needs an element before itself to function", nil)
 			}
 			prev_elem := stack.peek()
-			if prev_elem.get_grammar_term_type() == "bracket" && prev_elem.(*bracket).is_left {
+			if prev_elem.Get_grammar_term_type() == "bracket" && prev_elem.(*Bracket).Is_left {
 				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '*' cannot have a open bracket right before itself", nil)
 			}
-			if prev_elem.get_grammar_term_type() == "or" {
+			if prev_elem.Get_grammar_term_type() == "or" {
 				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '*' cannot have the 'or` operator right before itself", nil)
 			}
 			prev_elem = stack.pop()
-			new_star := star{}
-			new_star.content = prev_elem
+			new_star := Star{}
+			new_star.Content = prev_elem
 			stack.add(&new_star)
 			continue
 		}
@@ -192,26 +192,26 @@ func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[non_terminal]
 				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '+' needs an element before itself to function", nil)
 			}
 			prev_elem := stack.peek()
-			if prev_elem.get_grammar_term_type() == "bracket" && prev_elem.(*bracket).is_left {
+			if prev_elem.Get_grammar_term_type() == "bracket" && prev_elem.(*Bracket).Is_left {
 				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '+' cannot have a open bracket right before itself", nil)
 			}
-			if prev_elem.get_grammar_term_type() == "or" {
+			if prev_elem.Get_grammar_term_type() == "or" {
 				return GrammarRules, errorhandler.RetErr("Inavlid Grammar: '+' cannot have the 'or` operator right before itself", nil)
 			}
 			prev_elem = stack.pop()
-			new_plus := plus{}
-			new_plus.content = prev_elem
+			new_plus := Plus{}
+			new_plus.Content = prev_elem
 			stack.add(&new_plus)
 			continue
 		}
 		if token.TypeOfToken == dfa.OR {
-			new_or := or{}
+			new_or := Or{}
 			stack.add(&new_or)
 			continue
 		}
 		if token.TypeOfToken == dfa.STRING {
-			new_terminal := terminal{}
-			new_terminal.content = token.Lexemme[1 : len(token.Lexemme)-1] // Excluding the apostrophies from the sides
+			new_terminal := Terminal{}
+			new_terminal.Content = token.Lexemme[1 : len(token.Lexemme)-1] // Excluding the apostrophies from the sides
 			stack.add(&new_terminal)
 			continue
 		}

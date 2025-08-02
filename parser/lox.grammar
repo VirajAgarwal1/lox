@@ -1,5 +1,5 @@
 // GRAMMAR IN EBNF format
-expression -> comma
+expression -> comma "EOF"
 comma -> equality ("," equality)*
 equality -> comparison ( ( "!=" or "==" ) comparison )*
 comparison -> term ( ( ">" or ">=" or "<" or "<=" ) term )*
