@@ -111,7 +111,7 @@ type summaryOfAllDfaStates struct {
 	IntermediateToken      TokenType
 }
 type DFAStatesManager struct {
-	DfaForToken            []DFA
+	TokenDFAList           []DFA
 	DfaResultForToken      []DfaResult
 	CurrentLoopDfaResults  *summaryOfAllDfaStates
 	PreviousLoopDfaResults *summaryOfAllDfaStates
@@ -132,7 +132,7 @@ func (resultsSummary *summaryOfAllDfaStates) AreAllInvalid() bool {
 }
 
 func (stateManager *DFAStatesManager) Initialize() {
-	stateManager.DfaForToken = stateManager.GenerateDFAs()
+	stateManager.TokenDFAList = stateManager.GenerateDFAs()
 	stateManager.DfaResultForToken = make([]DfaResult, len(TokensList))
 	for i := range len(TokensList) {
 		stateManager.DfaResultForToken[i] = VALID
@@ -156,7 +156,7 @@ func (stateManager *DFAStatesManager) Step(input rune) {
 			continue
 		}
 		token := TokensList[i]
-		stateManager.DfaResultForToken[i] = stateManager.DfaForToken[i].Step(input)
+		stateManager.DfaResultForToken[i] = stateManager.TokenDFAList[i].Step(input)
 		if stateManager.DfaResultForToken[i].IsValid() {
 			stateManager.CurrentLoopDfaResults.IsAnyValidToken = true
 			stateManager.CurrentLoopDfaResults.ValidToken = token
@@ -173,7 +173,7 @@ func (stateManager *DFAStatesManager) ClearCurrentLoopDfaResults() {
 }
 func (stateManager *DFAStatesManager) ResetAllDFAs() {
 	for i := range len(TokensList) {
-		stateManager.DfaForToken[i].Reset()
+		stateManager.TokenDFAList[i].Reset()
 		stateManager.DfaResultForToken[i] = VALID
 	}
 }

@@ -105,7 +105,6 @@ func (scanner *LexicalAnalyzer) Reset() {
 	scanner.lexemme = nil
 	scanner.sustainCurrentInput = false
 }
-
 func (scanner *LexicalAnalyzer) prepareForNextToken() {
 	scanner.stateManger.FullReset()
 	scanner.lexemme = nil
