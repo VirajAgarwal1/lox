@@ -37,7 +37,7 @@ func demonstrateInput(input string, tokenTypes []dfa.TokenType) {
 
 	statesManager := dfa.DFAStatesManager{}
 	statesManager.Initialize()
-	dfas := statesManager.DfaForToken
+	dfas := statesManager.TokenDFAList
 
 	// Process each character
 	for i, char := range input {

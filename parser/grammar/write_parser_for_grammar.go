@@ -17,19 +17,19 @@ var TokenStringToType = map[string]string{
 	"COMMENT":    "dfa.COMMENT",
 
 	// Single-char tokens
-	" ":  "dfa.WHITESPACE",
-	"\n": "dfa.NEWLINE",
-	"(":  "dfa.LEFT_PAREN",
-	")":  "dfa.RIGHT_PAREN",
-	"{":  "dfa.LEFT_BRACE",
-	"}":  "dfa.RIGHT_BRACE",
-	",":  "dfa.COMMA",
-	".":  "dfa.DOT",
-	"-":  "dfa.MINUS",
-	"+":  "dfa.PLUS",
-	";":  "dfa.SEMICOLON",
-	"/":  "dfa.SLASH",
-	"*":  "dfa.STAR",
+	" ":   "dfa.WHITESPACE",
+	"\\n": "dfa.NEWLINE",
+	"(":   "dfa.LEFT_PAREN",
+	")":   "dfa.RIGHT_PAREN",
+	"{":   "dfa.LEFT_BRACE",
+	"}":   "dfa.RIGHT_BRACE",
+	",":   "dfa.COMMA",
+	".":   "dfa.DOT",
+	"-":   "dfa.MINUS",
+	"+":   "dfa.PLUS",
+	";":   "dfa.SEMICOLON",
+	"/":   "dfa.SLASH",
+	"*":   "dfa.STAR",
 
 	// One-or-two char tokens
 	"!":  "dfa.BANG",
@@ -379,6 +379,7 @@ func zeroOrMore(part func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error))
 		return output, true, nil
 	}
 }
+
 func oneOrMore(part func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error)) func(*lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
 	return func(buf *lexer.BufferedLexicalAnalyzer) ([]Node, bool, error) {
 		output := []Node{}
