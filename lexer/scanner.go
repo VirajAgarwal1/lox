@@ -41,7 +41,7 @@ type LexicalAnalyzer struct {
 	stateManger         *dfa.DFAStatesManager
 	currentInput        rune
 	currentPos          *inputRunePosition
-	lexemme             []rune
+	lexemme             []rune // TODO: Add a limit to this... A huge sequence of string/whitespace/newline/identifier/comment/number can make this blow up
 	sustainCurrentInput bool
 }
 
