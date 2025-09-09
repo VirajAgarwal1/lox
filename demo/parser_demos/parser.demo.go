@@ -25,3 +25,7 @@ func ParserDemo() {
 		fmt.Println()
 	}
 }
+
+// var a = 1 + (2 - 3) * 4
+// a = a + 1
+// fun(a + 2)
