@@ -102,22 +102,9 @@
 package main
 
 import (
-	"github.com/VirajAgarwal1/lox/demo/parser_demos"
+	streamable_parser_demos "github.com/VirajAgarwal1/lox/demo/streamable_parser_demos"
 )
 
 func main() {
-	parser_demos.WriteGrammarParserDemo()
+	streamable_parser_demos.Sample_fun()
 }
-
-/*
-// Parsing grammar code
-package main
-
-import (
-	grammar "github.com/VirajAgarwal1/lox/parser/grammar"
-)
-
-func main() {
-	grammar.Grammar_parser()
-}
-*/

@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/VirajAgarwal1/lox/errorhandler"
-	"github.com/VirajAgarwal1/lox/lexer/dfa"
 	dfa "github.com/VirajAgarwal1/lox/lexer/dfa"
+	"github.com/VirajAgarwal1/lox/streamable_parser/parser_generator"
 )
 
 /*
@@ -81,18 +81,10 @@ var Follow = map[string][]dfa.TokenType{
 	// ...
 }
 
-const epsilon = dfa.TokenType("epsilon") // Temporary epsilon, made it cause I need it for Production Rules
-
-type data_type_for_stack struct {
-	isNonTerminal bool
-	non_term_name string
-	terminal_type dfa.TokenType
-}
-
 type token_set map[dfa.TokenType]struct{}
 type syntaxRule struct {
 	set token_set
-	def []data_type_for_stack
+	def []parser_generator.Grammar_element
 }
 
 var grammarRuleSet = map[string]([]syntaxRule){
@@ -104,9 +96,9 @@ var grammarRuleSet = map[string]([]syntaxRule){
 				dfa.IDENTIFIER: {},
 				dfa.STRING:     {},
 			},
-			def: []data_type_for_stack{
-				{isNonTerminal: true, non_term_name: "term"},
-				{isNonTerminal: true, non_term_name: "expression_end"},
+			def: []parser_generator.Grammar_element{
+				{IsNonTerminal: true, Non_term_name: "term", Terminal_type: parser_generator.Epsilon},
+				{IsNonTerminal: true, Non_term_name: "expression_end", Terminal_type: parser_generator.Epsilon},
 			},
 		},
 	},
