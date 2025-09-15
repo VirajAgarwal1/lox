@@ -106,5 +106,5 @@ import (
 )
 
 func main() {
-	streamable_parser_demos.Sample_fun()
+	streamable_parser_demos.Sample_EBNF_to_BNF()
 }

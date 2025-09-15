@@ -11,7 +11,7 @@ import (
 	grammar_file_parser "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/grammar_file_parser"
 )
 
-func Sample_fun() {
+func Sample_EBNF_to_BNF() {
 	file_reader, err := os.Open("/Users/viraj.agarwal/Projects/lox/parser/lox.grammar")
 	if err != nil {
 		panic(err)
