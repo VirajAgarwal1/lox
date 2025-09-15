@@ -1,11 +1,8 @@
 package streamableparser
 
 import (
-	"fmt"
-
-	"github.com/VirajAgarwal1/lox/errorhandler"
 	dfa "github.com/VirajAgarwal1/lox/lexer/dfa"
-	"github.com/VirajAgarwal1/lox/streamable_parser/parser_generator"
+	utils "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/utils"
 )
 
 /*
@@ -84,7 +81,7 @@ var Follow = map[string][]dfa.TokenType{
 type token_set map[dfa.TokenType]struct{}
 type syntaxRule struct {
 	set token_set
-	def []parser_generator.Grammar_element
+	def []utils.Grammar_element
 }
 
 var grammarRuleSet = map[string]([]syntaxRule){
@@ -96,27 +93,27 @@ var grammarRuleSet = map[string]([]syntaxRule){
 				dfa.IDENTIFIER: {},
 				dfa.STRING:     {},
 			},
-			def: []parser_generator.Grammar_element{
-				{IsNonTerminal: true, Non_term_name: "term", Terminal_type: parser_generator.Epsilon},
-				{IsNonTerminal: true, Non_term_name: "expression_end", Terminal_type: parser_generator.Epsilon},
+			def: []utils.Grammar_element{
+				{IsNonTerminal: true, Non_term_name: "term", Terminal_type: utils.Epsilon},
+				{IsNonTerminal: true, Non_term_name: "expression_end", Terminal_type: utils.Epsilon},
 			},
 		},
 	},
 	// ...
 }
 
-func ProductionRule(non_terminal_name string, look_ahead_token dfa.TokenType) (error, []data_type_for_stack) {
-	slice_of_rules, ok := grammarRuleSet[non_terminal_name]
-	if !ok {
-		return errorhandler.RetErr(fmt.Sprintf("non-terminal {%s} not found", non_terminal_name), nil), nil
-	}
-	for _, rule := range slice_of_rules {
-		if _, ok := rule.set[look_ahead_token]; ok {
-			return nil, rule.def
-		}
-	}
-	return errorhandler.RetErr(fmt.Sprintf("no production rule found for non-terminal {%s} with look-ahead token {%s}", non_terminal_name, string(look_ahead_token)), nil), nil
-}
+// func ProductionRule(non_terminal_name string, look_ahead_token dfa.TokenType) (error, []data_type_for_stack) {
+// 	slice_of_rules, ok := grammarRuleSet[non_terminal_name]
+// 	if !ok {
+// 		return errorhandler.RetErr(fmt.Sprintf("non-terminal {%s} not found", non_terminal_name), nil), nil
+// 	}
+// 	for _, rule := range slice_of_rules {
+// 		if _, ok := rule.set[look_ahead_token]; ok {
+// 			return nil, rule.def
+// 		}
+// 	}
+// 	return errorhandler.RetErr(fmt.Sprintf("no production rule found for non-terminal {%s} with look-ahead token {%s}", non_terminal_name, string(look_ahead_token)), nil), nil
+// }
 
 /*
 

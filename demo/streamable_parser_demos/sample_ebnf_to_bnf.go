@@ -7,7 +7,8 @@ import (
 	"os"
 
 	"github.com/VirajAgarwal1/lox/lexer"
-	parser_generator "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator"
+	ebnf_to_bnf "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/ebnf_to_bnf"
+	grammar_file_parser "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/grammar_file_parser"
 )
 
 func Sample_fun() {
@@ -19,11 +20,11 @@ func Sample_fun() {
 
 	scanner := lexer.LexicalAnalyzer{}
 	scanner.Initialize(source)
-	prod, err := parser_generator.ProcessGrammarDefinition(&scanner)
+	ebnf_grammar, err := grammar_file_parser.ProcessGrammarDefinition(&scanner)
 	if err != nil && err != io.EOF {
 		panic(err)
 	}
 
-	sanitized_grammar := parser_generator.EbnfToBnfConverter(prod)
-	fmt.Println(sanitized_grammar)
+	bnf_grammar := ebnf_to_bnf.EbnfToBnfConverter(ebnf_grammar)
+	fmt.Println(bnf_grammar)
 }

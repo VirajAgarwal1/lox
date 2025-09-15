@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/VirajAgarwal1/lox/lexer/dfa"
+	gfp "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/grammar_file_parser"
 )
 
 type Grammar_element struct {
@@ -14,7 +15,7 @@ type Grammar_element struct {
 
 const Epsilon = dfa.TokenType("epsilon")
 
-var string_token_type_string = map[string]string{
+var String_to_type_string = map[string]string{
 	// Literals
 	"EOF":        "dfa.EOF",
 	"IDENTIFIER": "dfa.IDENTIFIER",
@@ -66,7 +67,7 @@ var string_token_type_string = map[string]string{
 	"while":  "dfa.WHILE",
 }
 
-var string_to_token_type = map[string]dfa.TokenType{
+var String_to_token = map[string]dfa.TokenType{
 	// Literals
 	"EOF":        dfa.EOF,
 	"IDENTIFIER": dfa.IDENTIFIER,
@@ -118,7 +119,7 @@ var string_to_token_type = map[string]dfa.TokenType{
 	"while":  dfa.WHILE,
 }
 
-func detect_or_in_sequence(description []Generic_grammar_term) []uint32 {
+func Detect_or_in_sequence(description []gfp.Generic_grammar_term) []uint32 {
 	out := make([]uint32, 0, len(description)/4)
 	for i, term := range description {
 		if term.Get_grammar_term_type() == "or" {
@@ -128,7 +129,7 @@ func detect_or_in_sequence(description []Generic_grammar_term) []uint32 {
 	return out
 }
 
-func indent_lines(input string, indentLevel int) string {
+func Indent_lines(input string, indentLevel int) string {
 	indent := ""
 	for i := 0; i < indentLevel; i++ {
 		indent += "\t"
@@ -144,7 +145,7 @@ func indent_lines(input string, indentLevel int) string {
 	return strings.Join(lines, "\n")
 }
 
-func contains[T comparable](slice []T, item T) bool {
+func Contains[T comparable](slice []T, item T) bool {
 	for _, v := range slice {
 		if v == item {
 			return true
