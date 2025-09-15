@@ -16,7 +16,7 @@ import (
 const artificial_non_term_prefix string = "999_"
 
 var artificial_non_terminal_counter int = 0
-var sanitized_grammar = map[string]([][]utils.Grammar_element){}
+var bnf_grammar = map[string]([][]utils.Grammar_element){}
 
 func process_term(term gfp.Generic_grammar_term) utils.Grammar_element {
 
@@ -41,7 +41,7 @@ func process_term(term gfp.Generic_grammar_term) utils.Grammar_element {
 		artificial_non_terminal_counter++
 
 		// Get the production for the new artifical non-terminal
-		sanitized_grammar[new_artificial_non_term_name] = [][]utils.Grammar_element{
+		bnf_grammar[new_artificial_non_term_name] = [][]utils.Grammar_element{
 			{
 				process_term(star_term.Content), {IsNonTerminal: true, Non_term_name: new_artificial_non_term_name},
 			},
@@ -61,7 +61,7 @@ func process_term(term gfp.Generic_grammar_term) utils.Grammar_element {
 		artificial_non_terminal_counter++
 
 		// Get the production for the new artifical non-terminal
-		sanitized_grammar[new_artificial_non_term_name] = [][]utils.Grammar_element{
+		bnf_grammar[new_artificial_non_term_name] = [][]utils.Grammar_element{
 			{
 				process_term(plus_term.Content), {IsNonTerminal: true, Non_term_name: new_artificial_non_term_name},
 			},
@@ -81,7 +81,7 @@ func process_term(term gfp.Generic_grammar_term) utils.Grammar_element {
 		artificial_non_terminal_counter++
 
 		// Get the production for the new artifical non-terminal
-		sanitized_grammar[new_artificial_non_term_name] = process_sequence(bracket_term.Contents)
+		bnf_grammar[new_artificial_non_term_name] = process_sequence(bracket_term.Contents)
 
 		return utils.Grammar_element{
 			IsNonTerminal: true,
@@ -106,7 +106,7 @@ func process_or(choices [][]gfp.Generic_grammar_term) [][]utils.Grammar_element 
 				IsNonTerminal: true,
 				Non_term_name: new_artificial_non_term_name,
 			}})
-			sanitized_grammar[new_artificial_non_term_name] = process_sequence(path)
+			bnf_grammar[new_artificial_non_term_name] = process_sequence(path)
 		}
 	}
 	return output
@@ -137,14 +137,14 @@ func process_sequence(sequence []gfp.Generic_grammar_term) [][]utils.Grammar_ele
 	return output
 }
 
-func EbnfToBnfConverter(grammar_rules map[gfp.Non_terminal]([]gfp.Generic_grammar_term)) map[string]([][]utils.Grammar_element) {
+func EbnfToBnfConverter(ebnf_grammar map[gfp.Non_terminal]([]gfp.Generic_grammar_term)) map[string]([][]utils.Grammar_element) {
 	// The first slice is for incorporating 'or' and the internal slices for the actual definition
 
-	sanitized_grammar = map[string]([][]utils.Grammar_element){}
+	bnf_grammar = map[string]([][]utils.Grammar_element){}
 
-	for non_term, def := range grammar_rules {
-		sanitized_grammar[non_term.Name] = process_sequence(def)
+	for non_term, def := range ebnf_grammar {
+		bnf_grammar[non_term.Name] = process_sequence(def)
 	}
 
-	return sanitized_grammar
+	return bnf_grammar
 }
