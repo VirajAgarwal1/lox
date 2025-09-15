@@ -1,4 +1,4 @@
-package parser_generator
+package grammar_parser
 
 import (
 	"io"

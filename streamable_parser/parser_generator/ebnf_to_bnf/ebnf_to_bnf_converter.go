@@ -1,4 +1,4 @@
-package parser_generator
+package ebnf_to_bnf
 
 import (
 	"strconv"

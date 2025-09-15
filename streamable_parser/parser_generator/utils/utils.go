@@ -1,4 +1,4 @@
-package parser_generator
+package utils
 
 import (
 	"strings"
