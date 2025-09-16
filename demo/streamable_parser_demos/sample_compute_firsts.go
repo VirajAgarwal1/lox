@@ -29,6 +29,6 @@ func Sample_compute_firsts() {
 	bnf_grammar := ebnf_to_bnf.EbnfToBnfConverter(ebnf_grammar)
 	fmt.Println(bnf_grammar)
 
-	firsts := first_follow.ComputeFirstFromBNF(bnf_grammar)
+	firsts := first_follow.ComputeFirstSets(bnf_grammar)
 	fmt.Println(firsts)
 }

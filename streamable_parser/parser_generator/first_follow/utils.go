@@ -5,7 +5,7 @@ import (
 	"github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/utils"
 )
 
-var bnf_grammar_global = map[string]([][]utils.Grammar_element){}
+var bnfGrammar = map[string]([][]utils.Grammar_element){}
 
 // A U (B - {E})
 func union_first_sets_wo_epsilon(A []dfa.TokenType, B []dfa.TokenType) []dfa.TokenType {
