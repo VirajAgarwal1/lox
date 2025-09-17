@@ -76,6 +76,7 @@ func ProcessGrammarDefinition(scanner *lexer.LexicalAnalyzer) (map[Non_terminal]
 	var stack Stack_type
 	var GrammarRules = make(map[Non_terminal]([]Generic_grammar_term))
 
+	// TODO: An error occurs when comments are placed in between the production rules
 	for {
 		token, err := scanner.ReadToken()
 		if err != nil && err != io.EOF {
