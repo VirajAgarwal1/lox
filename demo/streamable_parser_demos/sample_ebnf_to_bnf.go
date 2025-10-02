@@ -12,7 +12,7 @@ import (
 )
 
 func Sample_EBNF_to_BNF() {
-	file_reader, err := os.Open("/Users/viraj.agarwal/Projects/lox/parser/lox.grammar")
+	file_reader, err := os.Open("/parser/lox.grammar")
 	if err != nil {
 		panic(err)
 	}

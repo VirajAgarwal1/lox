@@ -13,7 +13,7 @@ import (
 1. Artificial non-terminals will always start with '999_'. Example, '999_1'. It starts with a number because non-terminals in grammar definition cannot start with numbers
 */
 
-const artificial_non_term_prefix string = "999_"
+const Artificial_non_term_prefix string = "999_"
 
 var artificial_non_terminal_counter int = 0
 var bnf_grammar = map[string]([][]utils.Grammar_element){}
@@ -37,7 +37,7 @@ func process_term(term gfp.Generic_grammar_term) utils.Grammar_element {
 
 	case "star":
 		star_term := term.(*gfp.Star)
-		new_artificial_non_term_name := artificial_non_term_prefix + strconv.Itoa(artificial_non_terminal_counter)
+		new_artificial_non_term_name := Artificial_non_term_prefix + strconv.Itoa(artificial_non_terminal_counter)
 		artificial_non_terminal_counter++
 
 		// Get the production for the new artifical non-terminal
@@ -57,7 +57,7 @@ func process_term(term gfp.Generic_grammar_term) utils.Grammar_element {
 
 	case "plus":
 		plus_term := term.(*gfp.Plus)
-		new_artificial_non_term_name := artificial_non_term_prefix + strconv.Itoa(artificial_non_terminal_counter)
+		new_artificial_non_term_name := Artificial_non_term_prefix + strconv.Itoa(artificial_non_terminal_counter)
 		artificial_non_terminal_counter++
 
 		// Get the production for the new artifical non-terminal
@@ -77,7 +77,7 @@ func process_term(term gfp.Generic_grammar_term) utils.Grammar_element {
 
 	case "bracket":
 		bracket_term := term.(*gfp.Bracket)
-		new_artificial_non_term_name := artificial_non_term_prefix + strconv.Itoa(artificial_non_terminal_counter)
+		new_artificial_non_term_name := Artificial_non_term_prefix + strconv.Itoa(artificial_non_terminal_counter)
 		artificial_non_terminal_counter++
 
 		// Get the production for the new artifical non-terminal
@@ -100,7 +100,7 @@ func process_or(choices [][]gfp.Generic_grammar_term) [][]utils.Grammar_element 
 		if len(path) == 1 {
 			output = append(output, []utils.Grammar_element{process_term(path[0])})
 		} else {
-			new_artificial_non_term_name := artificial_non_term_prefix + strconv.Itoa(artificial_non_terminal_counter)
+			new_artificial_non_term_name := Artificial_non_term_prefix + strconv.Itoa(artificial_non_terminal_counter)
 			artificial_non_terminal_counter++
 			output = append(output, []utils.Grammar_element{{
 				IsNonTerminal: true,

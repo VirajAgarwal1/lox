@@ -3,6 +3,7 @@ package utils
 import (
 	"strings"
 
+	"github.com/VirajAgarwal1/lox/lexer"
 	"github.com/VirajAgarwal1/lox/lexer/dfa"
 	gfp "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/grammar_file_parser"
 )
@@ -13,7 +14,7 @@ type Grammar_element struct {
 	Terminal_type dfa.TokenType
 }
 
-const Epsilon = dfa.TokenType("epsilon")
+const Epsilon = dfa.TokenType("Epsilon")
 
 var String_to_type_string = map[string]string{
 	// Literals
@@ -22,6 +23,7 @@ var String_to_type_string = map[string]string{
 	"STRING":     "dfa.STRING",
 	"NUMBER":     "dfa.NUMBER",
 	"COMMENT":    "dfa.COMMENT",
+	"Epsilon":    "utils.Epsilon",
 
 	// Single-char tokens
 	" ":   "dfa.WHITESPACE",
@@ -74,6 +76,7 @@ var String_to_token = map[string]dfa.TokenType{
 	"STRING":     dfa.STRING,
 	"NUMBER":     dfa.NUMBER,
 	"COMMENT":    dfa.COMMENT,
+	"Epsilon":    Epsilon,
 
 	// Single-char tokens
 	" ":   dfa.WHITESPACE,
@@ -148,6 +151,18 @@ func Indent_lines(input string, indentLevel int) string {
 func Contains[T comparable](slice []T, item T) bool {
 	for _, v := range slice {
 		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func InFirstSet(tok *lexer.Token, firstSet map[dfa.TokenType]struct{}) bool {
+	for k := range firstSet {
+		if tok.TypeOfToken == k {
+			return true
+		}
+		if k == Epsilon {
 			return true
 		}
 	}

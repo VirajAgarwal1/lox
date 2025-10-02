@@ -12,7 +12,7 @@ type FirstSetInfo struct {
 	FirstForDefinitions [][]dfa.TokenType
 }
 
-var FirstSets = map[string]FirstSetInfo{}
+var firstSets = map[string]FirstSetInfo{}
 
 func ComputeFirstForSequence(definition []utils.Grammar_element) []dfa.TokenType {
 
@@ -53,7 +53,7 @@ func ComputeFirstForAlternatives(definitions [][]utils.Grammar_element) FirstSet
 }
 func ComputeFirstForNonTerminal(non_term string) FirstSetInfo {
 
-	first_set, processed_already := FirstSets[non_term]
+	first_set, processed_already := firstSets[non_term]
 	if processed_already { // Caching
 		return first_set
 	}
@@ -62,9 +62,9 @@ func ComputeFirstForNonTerminal(non_term string) FirstSetInfo {
 	if !found {
 		panic(fmt.Sprintf("Trying to access a non-terminal %s which doesnt exist in the BNF grammar", non_term))
 	}
-	FirstSets[non_term] = ComputeFirstForAlternatives(definitions)
+	firstSets[non_term] = ComputeFirstForAlternatives(definitions)
 
-	return FirstSets[non_term]
+	return firstSets[non_term]
 }
 
 func ComputeFirstSets(bnf_grammar map[string]([][]utils.Grammar_element)) map[string]FirstSetInfo {
@@ -72,8 +72,8 @@ func ComputeFirstSets(bnf_grammar map[string]([][]utils.Grammar_element)) map[st
 	bnfGrammar = bnf_grammar
 
 	for non_term := range bnf_grammar {
-		FirstSets[non_term] = ComputeFirstForNonTerminal(non_term)
+		firstSets[non_term] = ComputeFirstForNonTerminal(non_term)
 	}
 
-	return FirstSets
+	return firstSets
 }

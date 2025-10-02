@@ -5,7 +5,7 @@ import (
 	"github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/utils"
 )
 
-var FollowSets = map[string]([]dfa.TokenType){}
+var followSets = map[string]([]dfa.TokenType){}
 
 func ComputeFollowFromSequence(non_term_on_lhs string, choices_idx int, non_term_idx int) []dfa.TokenType {
 
@@ -33,13 +33,13 @@ func ComputeFollowFromSequence(non_term_on_lhs string, choices_idx int, non_term
 
 func ComputeFollowForNonTerminal(non_term string) []dfa.TokenType {
 
-	follow_set, processed_already := FollowSets[non_term]
+	follow_set, processed_already := followSets[non_term]
 	if processed_already {
 		return follow_set
 	}
 
 	follow_set = []dfa.TokenType{dfa.EOF}
-	FollowSets[non_term] = follow_set // So that this non-term is not tried again in the recursion
+	followSets[non_term] = follow_set // So that this non-term is not tried again in the recursion
 
 	for lhs_non_term, definitions := range bnfGrammar {
 		for or_idx, def := range definitions {
@@ -50,7 +50,7 @@ func ComputeFollowForNonTerminal(non_term string) []dfa.TokenType {
 		}
 	}
 
-	FollowSets[non_term] = follow_set
+	followSets[non_term] = follow_set
 	return follow_set
 }
 
@@ -59,7 +59,7 @@ func ComputeFollowSets(bnf_grammar map[string]([][]utils.Grammar_element)) map[s
 	bnfGrammar = bnf_grammar
 
 	for non_term := range bnf_grammar {
-		FollowSets[non_term] = ComputeFollowForNonTerminal(non_term)
+		followSets[non_term] = ComputeFollowForNonTerminal(non_term)
 	}
-	return FollowSets
+	return followSets
 }

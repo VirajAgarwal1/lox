@@ -8,6 +8,8 @@ import (
 	"github.com/VirajAgarwal1/lox/lexer/dfa"
 )
 
+// TODO: This parser accepts grammar in EBNF* format.... But I forgot to add `?` i.e. "One or None" operator.... And it also doesn't accept Epsilons... So yeah, this feature is not here in this supposedly EBNF format
+
 // This interface actually is used to refer to all the types' pointers.
 type Generic_grammar_term interface {
 	Get_grammar_term_type() string
