@@ -41,6 +41,7 @@ type EmitElem struct {
 	Leaf    *lexer.Token
 }
 
+// TODO: Add an abstraction layer for the stack where on exceeding 80% capacity it will, offload 60% of the stack to a file (aka disk). If even that file gets over 100% capacity, then create a new file. There will be 1 file which keeps tracks of what files hold what indexes of the stack, this manager file is what the abstraction will keep track of...
 // StreamableParser represents the LL(1) parser state machine. It maintains a parsing stack and a lexical scanner to consume tokens.
 type StreamableParser struct {
 	stack   []StackElem                    // the parser’s working stack (terminals & non-terminals)
