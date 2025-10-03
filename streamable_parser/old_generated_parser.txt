@@ -1,0 +1,727 @@
+package streamable_parser
+
+import (
+	"fmt"
+	"io"
+	"strconv"
+	"strings"
+
+	"github.com/VirajAgarwal1/lox/lexer"
+	dfa "github.com/VirajAgarwal1/lox/lexer/dfa"
+	"github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/ebnf_to_bnf"
+	utils "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/utils"
+)
+
+type StackElemType byte
+
+type EmitElemType byte
+
+// Represents one sequence of grammar elements and its First set
+type GrammarSequence struct {
+	Elements []utils.Grammar_element    // clearer than "definition"
+	FirstSet map[dfa.TokenType]struct{} // more descriptive than "first"
+}
+
+// Represents all production rules for a non-terminal
+type ProductionRule struct {
+	Sequences []GrammarSequence          // clearer than "definitions"
+	FollowSet map[dfa.TokenType]struct{} // more descriptive than "follow"
+}
+
+// StackElem represents an event emitted by the parser during parsing. It can be either a non-terminal expansion or a leaf (token) emission. It is also the type of the object in the stack
+type StackElem struct {
+	Type         StackElemType // kind of emit: start, end or leaf
+	NonTermName  string
+	TerminalType dfa.TokenType
+}
+
+type EmitElem struct {
+	Type    EmitElemType // kind of emit: start, end, leaf or error
+	Content string       // name of the non-terminal (valid for start/end) or error message (for error event)
+	Leaf    *lexer.Token
+}
+
+// StreamableParser represents the LL(1) parser state machine. It maintains a parsing stack and a lexical scanner to consume tokens.
+type StreamableParser struct {
+	stack   []StackElem                    // the parser’s working stack (terminals & non-terminals)
+	scanner *lexer.BufferedLexicalAnalyzer // the input token stream
+}
+
+const (
+	StackElemType_Start StackElemType = iota
+	StackElemType_End
+	StackElemType_Leaf
+)
+
+const (
+	EmitElemType_Start EmitElemType = iota
+	EmitElemType_End
+	EmitElemType_Leaf
+	EmitElemType_Error
+)
+
+const StartingNonTerminal string = "expression"
+
+var grammarRules = map[string]ProductionRule{
+	"999_14": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.MINUS: {}, dfa.PLUS: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.SLASH: {}, dfa.STAR: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_15"}, {IsNonTerminal: true, Non_term_name: "999_14"},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					utils.Epsilon: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: utils.Epsilon},
+				},
+			},
+		},
+	}, "factor": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.MINUS: {}, dfa.PLUS: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "unary"}, {IsNonTerminal: true, Non_term_name: "999_14"},
+				},
+			},
+		},
+	}, "999_1": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.BANG},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.MINUS: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.MINUS},
+				},
+			},
+		},
+	}, "999_2": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.SLASH: {}, dfa.STAR: {}, dfa.MINUS: {}, dfa.PLUS: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.LEFT_PAREN: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.LEFT_PAREN}, {IsNonTerminal: true, Non_term_name: "expression"}, {IsNonTerminal: false, Terminal_type: dfa.RIGHT_PAREN},
+				},
+			},
+		},
+	}, "primary": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.SLASH: {}, dfa.STAR: {}, dfa.MINUS: {}, dfa.PLUS: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.IDENTIFIER: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.IDENTIFIER},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.NUMBER: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.NUMBER},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.STRING: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.STRING},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.TRUE: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.TRUE},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.FALSE: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.FALSE},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.NIL: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.NIL},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.LEFT_PAREN: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_2"},
+				},
+			},
+		},
+	}, "999_3": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.COMMA: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_4"}, {IsNonTerminal: true, Non_term_name: "999_3"},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					utils.Epsilon: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: utils.Epsilon},
+				},
+			},
+		},
+	}, "999_7": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG_EQUAL: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.BANG_EQUAL},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.EQUAL_EQUAL: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.EQUAL_EQUAL},
+				},
+			},
+		},
+	}, "999_6": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_7"}, {IsNonTerminal: true, Non_term_name: "comparison"},
+				},
+			},
+		},
+	}, "999_8": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_9"}, {IsNonTerminal: true, Non_term_name: "999_8"},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					utils.Epsilon: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: utils.Epsilon},
+				},
+			},
+		},
+	}, "comma": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "equality"}, {IsNonTerminal: true, Non_term_name: "999_3"},
+				},
+			},
+		},
+	}, "equality": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "comparison"}, {IsNonTerminal: true, Non_term_name: "999_5"},
+				},
+			},
+		},
+	}, "999_13": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.MINUS: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.MINUS},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.PLUS: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.PLUS},
+				},
+			},
+		},
+	}, "999_5": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_6"}, {IsNonTerminal: true, Non_term_name: "999_5"},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					utils.Epsilon: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: utils.Epsilon},
+				},
+			},
+		},
+	}, "999_10": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.GREATER: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.GREATER},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.GREATER_EQUAL: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.GREATER_EQUAL},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.LESS: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.LESS},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.LESS_EQUAL: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.LESS_EQUAL},
+				},
+			},
+		},
+	}, "expression": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "comma"},
+				},
+			},
+		},
+	}, "999_4": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.COMMA: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.COMMA}, {IsNonTerminal: true, Non_term_name: "equality"},
+				},
+			},
+		},
+	}, "999_9": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_10"}, {IsNonTerminal: true, Non_term_name: "term"},
+				},
+			},
+		},
+	}, "999_12": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.MINUS: {}, dfa.PLUS: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.MINUS: {}, dfa.PLUS: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_13"}, {IsNonTerminal: true, Non_term_name: "factor"},
+				},
+			},
+		},
+	}, "999_11": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.MINUS: {}, dfa.PLUS: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_12"}, {IsNonTerminal: true, Non_term_name: "999_11"},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					utils.Epsilon: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: utils.Epsilon},
+				},
+			},
+		},
+	}, "term": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "factor"}, {IsNonTerminal: true, Non_term_name: "999_11"},
+				},
+			},
+		},
+	}, "999_0": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.SLASH: {}, dfa.STAR: {}, dfa.MINUS: {}, dfa.PLUS: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG: {}, dfa.MINUS: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_1"}, {IsNonTerminal: true, Non_term_name: "unary"},
+				},
+			},
+		},
+	}, "unary": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.SLASH: {}, dfa.STAR: {}, dfa.MINUS: {}, dfa.PLUS: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG: {}, dfa.MINUS: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_0"},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "primary"},
+				},
+			},
+		},
+	}, "comparison": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "term"}, {IsNonTerminal: true, Non_term_name: "999_8"},
+				},
+			},
+		},
+	}, "999_16": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.BANG: {}, dfa.MINUS: {}, dfa.IDENTIFIER: {}, dfa.NUMBER: {}, dfa.STRING: {}, dfa.TRUE: {}, dfa.FALSE: {}, dfa.NIL: {}, dfa.LEFT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.SLASH: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.SLASH},
+				},
+			}, {
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.STAR: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: false, Terminal_type: dfa.STAR},
+				},
+			},
+		},
+	}, "999_15": {
+		FollowSet: map[dfa.TokenType]struct{}{
+			dfa.EOF: {}, dfa.SLASH: {}, dfa.STAR: {}, dfa.MINUS: {}, dfa.PLUS: {}, dfa.GREATER: {}, dfa.GREATER_EQUAL: {}, dfa.LESS: {}, dfa.LESS_EQUAL: {}, dfa.BANG_EQUAL: {}, dfa.EQUAL_EQUAL: {}, dfa.COMMA: {}, dfa.RIGHT_PAREN: {},
+		},
+		Sequences: []GrammarSequence{
+			{
+				FirstSet: map[dfa.TokenType]struct{}{
+					dfa.SLASH: {}, dfa.STAR: {},
+				},
+				Elements: []utils.Grammar_element{
+					{IsNonTerminal: true, Non_term_name: "999_16"}, {IsNonTerminal: true, Non_term_name: "unary"},
+				},
+			},
+		},
+	},
+}
+
+func in_first_of_non_term(tok *lexer.Token, non_term string) int {
+	seqs := grammarRules[non_term].Sequences
+	for i := range seqs {
+		if utils.InFirstSet(tok, seqs[i].FirstSet) {
+			return i
+		}
+	}
+	return -1
+}
+func in_follow_of_non_term(tok *lexer.Token, non_term string) bool {
+	folllow_set := grammarRules[non_term].FollowSet
+	for el := range folllow_set {
+		if el == tok.TypeOfToken {
+			return true
+		}
+	}
+	return false
+}
+
+func (sp *StreamableParser) stack_pop() StackElem {
+	top := sp.stack_peek()
+	sp.stack = sp.stack[:len(sp.stack)-1]
+	return top
+}
+func (sp *StreamableParser) stack_push(el *StackElem) {
+	sp.stack = append(sp.stack, *el)
+}
+func (sp *StreamableParser) stack_peek() StackElem {
+	return sp.stack[len(sp.stack)-1]
+}
+
+func (sp *StreamableParser) Initialize(scanner *lexer.BufferedLexicalAnalyzer) {
+	sp.stack = make([]StackElem, 0, 30)
+	sp.scanner = scanner
+
+	sp.stack = append(sp.stack, StackElem{Type: StackElemType_Start, NonTermName: StartingNonTerminal})
+}
+func (sp *StreamableParser) EmitEvent(err error, el *StackElem, tok *lexer.Token) *EmitElem {
+	if err != nil {
+		return &EmitElem{
+			Type:    EmitElemType_Error,
+			Content: err.Error(),
+		}
+	}
+
+	switch el.Type {
+	case StackElemType_Start:
+		if strings.HasPrefix(el.NonTermName, ebnf_to_bnf.Artificial_non_term_prefix) {
+			return nil
+		}
+		return &EmitElem{
+			Type:    EmitElemType_Start,
+			Content: el.NonTermName,
+		}
+
+	case StackElemType_End:
+		if strings.HasPrefix(el.NonTermName, ebnf_to_bnf.Artificial_non_term_prefix) {
+			return nil
+		}
+		return &EmitElem{
+			Type:    EmitElemType_End,
+			Content: el.NonTermName,
+		}
+
+	case StackElemType_Leaf:
+		return &EmitElem{
+			Type:    EmitElemType_Leaf,
+			Content: string(tok.Lexemme),
+			Leaf:    tok,
+		}
+	}
+
+	return nil
+}
+func (sp *StreamableParser) Parse() *EmitElem {
+
+	if len(sp.stack) < 1 {
+		next_tok, err := sp.scanner.ReadToken()
+		if err != nil {
+			return &EmitElem{
+				Type:    EmitElemType_Error,
+				Content: err.Error(),
+			}
+		}
+		return &EmitElem{
+			Type:    EmitElemType_Error,
+			Content: fmt.Sprintf("Expected \"EOF\" but got \"%s\"", next_tok.ToString()),
+		}
+	}
+
+	for {
+
+		top := sp.stack_peek()
+		lookahead_token, err := sp.scanner.Peek()
+		if err != nil && err != io.EOF {
+			return &EmitElem{
+				Type:    EmitElemType_Error,
+				Content: err.Error(),
+			}
+		}
+
+		switch top.Type {
+		case StackElemType_Leaf:
+			if top.TerminalType == utils.Epsilon {
+				sp.stack_pop()
+				continue
+			}
+			if lookahead_token.TypeOfToken == top.TerminalType {
+				sp.stack_pop()
+				sp.scanner.ReadToken()
+				return sp.EmitEvent(nil, &top, lookahead_token)
+			}
+			// Else consume tokens to put into the error message until, we get to a token, which is equal to the top
+			err_start := strconv.FormatUint(uint64(lookahead_token.Line), 10) + "," + strconv.FormatUint(uint64(lookahead_token.Offset), 10)
+			for lookahead_token.TypeOfToken != top.TerminalType {
+				sp.scanner.ReadToken()
+				lookahead_token, err = sp.scanner.Peek()
+				// TODO: Idealy, an error which occurs while doing error recovery should also be reported... But for simplicity's sake, I will ignore this error for now
+			}
+			err_end := strconv.FormatUint(uint64(lookahead_token.Line), 10) + "," + strconv.FormatUint(uint64(lookahead_token.Offset), 10)
+			return sp.EmitEvent(
+				fmt.Errorf("parse error from %s to %s, expected \"%v\"", err_start, err_end, top.TerminalType),
+				nil,
+				lookahead_token,
+			)
+
+		case StackElemType_End:
+			sp.stack_pop()
+			output := sp.EmitEvent(nil, &top, lookahead_token)
+			if output == nil {
+				continue
+			}
+			return output
+
+		case StackElemType_Start:
+			prod_rule := in_first_of_non_term(lookahead_token, top.NonTermName)
+			sp.stack_pop()
+			if prod_rule != -1 {
+				sp.stack_push(&StackElem{
+					Type:        StackElemType_End,
+					NonTermName: top.NonTermName,
+				})
+				for i := len(grammarRules[top.NonTermName].Sequences[prod_rule].Elements) - 1; i > -1; i-- {
+					if grammarRules[top.NonTermName].Sequences[prod_rule].Elements[i].IsNonTerminal {
+						sp.stack_push(&StackElem{
+							Type:        StackElemType_Start,
+							NonTermName: grammarRules[top.NonTermName].Sequences[prod_rule].Elements[i].Non_term_name,
+						})
+					} else {
+						sp.stack_push(&StackElem{
+							Type:         StackElemType_Leaf,
+							TerminalType: grammarRules[top.NonTermName].Sequences[prod_rule].Elements[i].Terminal_type,
+						})
+					}
+				}
+				output := sp.EmitEvent(nil, &top, lookahead_token)
+				if output == nil {
+					continue
+				}
+				return output
+			}
+			err_start := strconv.FormatUint(uint64(lookahead_token.Line), 10) + "," + strconv.FormatUint(uint64(lookahead_token.Offset), 10)
+			for !in_follow_of_non_term(lookahead_token, top.NonTermName) {
+				sp.scanner.ReadToken()
+				lookahead_token, err = sp.scanner.Peek()
+				// TODO: Idealy, an error which occurs while doing error recovery should also be reported... But for simplicity's sake, I will ignore this error for now
+			}
+			err_end := strconv.FormatUint(uint64(lookahead_token.Line), 10) + "," + strconv.FormatUint(uint64(lookahead_token.Offset), 10)
+			return sp.EmitEvent(
+				fmt.Errorf("parse error from %s to %s", err_start, err_end),
+				nil,
+				lookahead_token,
+			)
+		}
+	}
+}

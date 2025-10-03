@@ -37,7 +37,7 @@ func (b *BufferedLexicalAnalyzer) Initialize(source *bufio.Reader) {
 	b.buffer[b.next_i].t = t
 	b.buffer[b.next_i].err = err
 }
-func (b *BufferedLexicalAnalyzer) ConsumeOneToken() (*Token, error) {
+func (b *BufferedLexicalAnalyzer) ReadToken() (*Token, error) {
 
 	out_token := b.buffer[b.cur_i].t
 	out_error := b.buffer[b.cur_i].err
@@ -53,12 +53,12 @@ func (b *BufferedLexicalAnalyzer) ConsumeOneToken() (*Token, error) {
 
 	return out_token, out_error
 }
-func (b *BufferedLexicalAnalyzer) NextTokenWithoutConsume() (*Token, error) {
+func (b *BufferedLexicalAnalyzer) LookAhead() (*Token, error) {
 	return b.buffer[b.next_i].t, b.buffer[b.next_i].err
 }
-func (b *BufferedLexicalAnalyzer) CurrentTokenWithoutConsume() (*Token, error) {
+func (b *BufferedLexicalAnalyzer) Peek() (*Token, error) {
 	return b.buffer[b.cur_i].t, b.buffer[b.cur_i].err
 }
-func (b *BufferedLexicalAnalyzer) PreviousTokenWithoutConsume() (*Token, error) {
+func (b *BufferedLexicalAnalyzer) LookBack() (*Token, error) {
 	return b.buffer[b.prev_i].t, b.buffer[b.prev_i].err
 }
