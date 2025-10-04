@@ -2,11 +2,13 @@
 
 A Go-based interpreter implementation for the Lox programming language, featuring custom-built lexer and parser components **built entirely from scratch**.
 
+## Project Origin
+
+This project started as an implementation of the Lox programming language from Robert Nystrom's excellent book ["Crafting Interpreters"](https://craftinginterpreters.com/). However, I wanted to take a different approach: **building the language in Go with a streaming architecture from the ground up**. Rather than following the book's implementation directly, I used it as inspiration to explore compiler construction deeply, with a focus on creating parsers that can handle inputs incrementally without loading entire parse trees into memory.
+
 ## A Journey Through Compiler Construction
 
 This project represents a deep dive into the fascinating world of compiler theory, where I built every component from the ground up to truly understand how programming languages work. What started as curiosity about "how does code become execution?" became an intensive learning journey through lexical analysis, parsing theory, grammar design, and code generation.
-
-### The Learning Experience
 
 ## What Makes This Project Special
 
@@ -80,6 +82,36 @@ Because understanding is as important as building:
 - Working demo programs for every major component
 - Complete test suites
 - Example grammars and sample code
+
+## Demo Videos - See It In Action! 
+
+Want to see how this all works? Check out these video demonstrations:
+
+### 📹 **[dfa-demo.mp4](dfa-demo.mp4)**
+**DFA-Based Tokenization in Action**
+- Watch how deterministic finite automata process input character-by-character
+- See state transitions and token recognition in real-time
+- Understand how maximal munching and conflict resolution work
+
+### 📹 **[scanner-demo.mp4](scanner-demo.mp4)**
+**Complete Lexical Analysis**
+- Full demonstration of the lexer converting source code to tokens
+- See how keywords, operators, literals, and identifiers are recognized
+- Follow tokens through the scanning pipeline
+
+### 📹 **[streamable_parser code generation demo.mp4](streamable_parser%20code%20generation%20demo.mp4)**
+**Automatic Parser Generation**
+- Watch the parser generator read a grammar file and produce working parser code
+- See EBNF to BNF conversion, FIRST/FOLLOW set computation in action
+- Observe complete LL(1) parser generation from start to finish
+
+### 📹 **[streamable_parser parsing demo.mp4](streamable_parser%20parsing%20demo.mp4)**
+**Streaming Parser in Action**
+- See the generated LL(1) parser process expressions incrementally
+- Watch event-based parsing with start/end/leaf emissions
+- Follow the parse tree construction in real-time
+
+These videos provide visual walkthroughs of the core components and are a great way to quickly understand what this project does!
 
 ## The Research Behind It
 

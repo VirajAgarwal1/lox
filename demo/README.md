@@ -349,6 +349,28 @@ BNF:   expr -> term __repeat_expr_0
        __repeat_expr_0 -> "+" term __repeat_expr_0 | ε
 ```
 
+### Sample_parser_writer()
+
+**Purpose:** Demonstrates the complete streamable parser code generation process.
+
+**What it shows:**
+- Reading a grammar file
+- Converting EBNF to BNF automatically
+- Computing FIRST and FOLLOW sets
+- Generating complete LL(1) parser code with parsing tables
+- Writing the generated parser to `streamable_parser/generated_parser.go`
+
+**Why it's important:**
+This is the **ultimate synthesis** of all the parser generation components. It takes a simple grammar file and automatically produces a complete, working, streaming parser with all the necessary machinery (FIRST/FOLLOW tables, error recovery, event emission).
+
+**Example usage in main.go:**
+```go
+func main() {
+    streamable_parser_demos.Sample_parser_writer()
+}
+```
+
+**Video demonstration:** See `streamable_parser code generation demo.mp4` in the root directory for a complete visual walkthrough of the entire code generation process.
 
 ## Video Demonstrations
 
@@ -356,8 +378,10 @@ The project includes video demonstrations:
 
 - **`dfa-demo.mp4`** - Visual explanation of how DFAs work for tokenization
 - **`scanner-demo.mp4`** - Complete lexical analysis demonstration
+- **`streamable_parser code generation demo.mp4`** - Complete demonstration of generating an LL(1) parser from a grammar file
+- **`streamable_parser parsing demo.mp4`** - Demonstration of the generated streaming parser in action
 
-These videos provide visual walkthroughs
+These videos provide visual walkthroughs of all major components and are a great way to see the system working end-to-end!
 
 ## Common Patterns
 
