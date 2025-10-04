@@ -178,7 +178,10 @@ func (sp *StreamableParser) Parse() *EmitElem {
 			for lookahead_token.TypeOfToken != top.TerminalType {
 				sp.scanner.ReadToken()
 				lookahead_token, err = sp.scanner.Peek()
-				// TODO: Idealy, an error which occurs while doing error recovery should also be reported... But for simplicity's sake, I will ignore this error for now
+				if err != nil {
+					// Hit EOF or other error during recovery - can't continue
+					break
+				}
 			}
 			err_end := strconv.FormatUint(uint64(lookahead_token.Line), 10) + "," + strconv.FormatUint(uint64(lookahead_token.Offset), 10)
 			return sp.EmitEvent(
@@ -226,7 +229,10 @@ func (sp *StreamableParser) Parse() *EmitElem {
 			for !in_follow_of_non_term(lookahead_token, top.NonTermName) {
 				sp.scanner.ReadToken()
 				lookahead_token, err = sp.scanner.Peek()
-				// TODO: Idealy, an error which occurs while doing error recovery should also be reported... But for simplicity's sake, I will ignore this error for now
+				if err != nil {
+					// Hit EOF or other error during recovery - can't continue
+					break
+				}
 			}
 			err_end := strconv.FormatUint(uint64(lookahead_token.Line), 10) + "," + strconv.FormatUint(uint64(lookahead_token.Offset), 10)
 			return sp.EmitEvent(

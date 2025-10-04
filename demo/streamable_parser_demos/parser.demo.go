@@ -3,11 +3,16 @@ package streamable_parser_demos
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/VirajAgarwal1/lox/lexer"
 	"github.com/VirajAgarwal1/lox/streamable_parser"
+	ebnf_to_bnf "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/ebnf_to_bnf"
+	"github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/first_follow"
+	grammar_file_parser "github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/grammar_file_parser"
+	"github.com/VirajAgarwal1/lox/streamable_parser/parser_generator/parser_writer"
 )
 
 type temp_node struct {
@@ -99,56 +104,83 @@ func prettyPrint(node *temp_node, prefix string, isLast bool) {
 	}
 }
 
-func prettyPrintEmit(e *streamable_parser.EmitElem) string {
-	if e == nil {
-		return "<nil>"
+// Sample_generate_streamable_parser generates a StreamableParser from a grammar file.
+// IMPORTANT: After running this, you must run your program AGAIN to use the generated parser.
+// Go compiles code at build-time, so the newly generated code won't be available until the next run.
+func Sample_generate_streamable_parser() {
+	fmt.Println("=== Step 1: Generate Parser Code ===")
+	fmt.Println()
+
+	// Read and parse the grammar file
+	grammarFile, err := os.Open("parser/lox.grammar")
+	if err != nil {
+		panic(err)
+	}
+	defer grammarFile.Close()
+
+	scanner := lexer.LexicalAnalyzer{}
+	scanner.Initialize(bufio.NewReader(grammarFile))
+	ebnfGrammar, err := grammar_file_parser.ProcessGrammarDefinition(&scanner)
+	if err != nil && err != io.EOF {
+		panic(err)
 	}
 
-	switch e.Type {
-	case streamable_parser.EmitElemType_Start:
-		return fmt.Sprintf("Start: %s", e.Content)
+	// Convert EBNF to BNF and compute parsing tables
+	bnfGrammar := ebnf_to_bnf.EbnfToBnfConverter(ebnfGrammar)
+	firsts := first_follow.ComputeFirstSets(bnfGrammar)
+	follows := first_follow.ComputeFollowSets(bnfGrammar)
 
-	case streamable_parser.EmitElemType_End:
-		return fmt.Sprintf("End: %s", e.Content)
-
-	case streamable_parser.EmitElemType_Leaf:
-		if e.Leaf != nil {
-			return fmt.Sprintf("Leaf: %s (%s)", e.Content, string(e.Leaf.Lexemme))
-		}
-		return fmt.Sprintf("Leaf: %s", e.Content)
-
-	case streamable_parser.EmitElemType_Error:
-		return fmt.Sprintf("Error: %s", e.Content)
-
-	default:
-		return fmt.Sprintf("Unknown: %s", e.Content)
+	// Generate the parser code
+	currentDir, _ := os.Getwd()
+	outputPath := currentDir + "/streamable_parser/generated_parser.go"
+	err = parser_writer.WriteParser(outputPath, bnfGrammar, "expression", firsts, follows)
+	if err != nil {
+		panic(err)
 	}
+
+	fmt.Printf("✓ Parser generated successfully!\n")
+	fmt.Printf("  Output: %s\n", outputPath)
+	fmt.Println()
+	fmt.Println("NEXT: Change main.go to call Sample_streamable_parser_demo() and run again.")
 }
 
+// Sample_streamable_parser_demo uses the generated parser to parse an expression.
+// IMPORTANT: You must run Sample_generate_streamable_parser() FIRST (in a separate execution)
+// to generate the parser code before this demo will work.
 func Sample_streamable_parser_demo() {
-	wd, _ := os.Getwd()
-	fmt.Println("Working dir:", wd)
+	fmt.Println("=== Step 2: Use the Generated Parser ===")
+	fmt.Println()
 
-	// Sample input: conforms to your grammar
-	file_reader := strings.NewReader(`foo+42,("bar"==baz)`)
-	source := bufio.NewReader(file_reader)
+	// Parse a sample expression
+	testInput := `1+2*3-4/"hello"+true`
+	fmt.Printf("Parsing: %s\n\n", testInput)
 
-	// Initialize lexer and parser
-	buf_scanner := lexer.BufferedLexicalAnalyzer{}
-	buf_scanner.Initialize(source)
+	// Initialize lexer
+	bufferedScanner := lexer.BufferedLexicalAnalyzer{}
+	bufferedScanner.Initialize(bufio.NewReader(strings.NewReader(testInput)))
 
+	// Initialize parser
 	parser := streamable_parser.StreamableParser{}
-	parser.Initialize(&buf_scanner)
+	parser.Initialize(&bufferedScanner)
 
 	// Collect parse events
-	var out []*streamable_parser.EmitElem
-	for i := 0; i < 100; i++ {
+	var events []*streamable_parser.EmitElem
+	for range 100 {
 		evt := parser.Parse()
-		fmt.Println(prettyPrintEmit(evt))
-		out = append(out, evt)
+		if evt.Type == streamable_parser.EmitElemType_Error {
+			if evt.Content == io.EOF.Error() {
+				break
+			}
+			fmt.Printf("Parse error: %s\n", evt.Content)
+			break
+		}
+		events = append(events, evt)
 	}
 
-	// Build tree and pretty print it
-	root := buildTree(out)
-	prettyPrint(root, "", true) // root has no prefix and is treated as "last"
+	// Display parse tree
+	fmt.Println("Parse tree:")
+	root := buildTree(events)
+	prettyPrint(root, "", true)
+
+	fmt.Println("\n✓ Parsing complete!")
 }
