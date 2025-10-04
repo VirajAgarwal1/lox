@@ -171,8 +171,6 @@ func Sample_streamable_parser_demo() {
 			if evt.Content == io.EOF.Error() {
 				break
 			}
-			fmt.Printf("Parse error: %s\n", evt.Content)
-			break
 		}
 		events = append(events, evt)
 	}
