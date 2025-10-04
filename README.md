@@ -4,79 +4,23 @@ A Go-based interpreter implementation for the Lox programming language, featurin
 
 ## Project Origin
 
-This project started as an implementation of the Lox programming language from Robert Nystrom's excellent book ["Crafting Interpreters"](https://craftinginterpreters.com/). However, I wanted to take a different approach: **building the language in Go with a streaming architecture from the ground up**. Rather than following the book's implementation directly, I used it as inspiration to explore compiler construction deeply, with a focus on creating parsers that can handle inputs incrementally without loading entire parse trees into memory.
-
-## A Journey Through Compiler Construction
-
-This project represents a deep dive into the fascinating world of compiler theory, where I built every component from the ground up to truly understand how programming languages work. What started as curiosity about "how does code become execution?" became an intensive learning journey through lexical analysis, parsing theory, grammar design, and code generation.
+This project started as an implementation of the Lox programming language from Robert Nystrom's excellent book ["Crafting Interpreters"](https://craftinginterpreters.com/). However, I wanted to take a different approach: **building the language in Go with a streaming architecture from the ground up**. Rather than following the book's implementation directly, I used it as inspiration to build every component from scratch—from DFA-based lexers to LL(1) parser generators—focusing on creating parsers that handle inputs incrementally without loading entire parse trees into memory.
 
 ## What Makes This Project Special
 
 ### 1. **Hand-Crafted DFA-Based Lexer** 
-I designed and implemented deterministic finite automata from scratch, not using any regex libraries or existing tokenizer frameworks. This meant:
-- Researching DFA theory and state machine design
-- Hand-coding state transitions for every token type
-- Implementing maximal munching and conflict resolution algorithms
-- Optimizing for performance with minimal memory allocations
+Built deterministic finite automata from scratch without regex libraries—hand-coding state transitions for every token type, implementing maximal munching and conflict resolution, optimized for minimal memory allocations.
 
 ### 2. **Recursive Descent Parser with Code Generation**
-Building a parser is one thing - building a *parser generator* is another level entirely. Here's the meta-challenge: **to generate parsers, I first had to build a parser that parses grammar files themselves.**
-
-This was a fascinating recursive problem:
-- Built a complete lexer/parser specifically for grammar file syntax (EBNF notation)
-- The grammar parser had to handle terminals, non-terminals, operators (`*`, `+`, `or`), grouping, and all EBNF constructs
-- Implemented parser combinators for composable parsing logic
-- Designed AST structures to represent grammar rules internally
-- **Automatic code generation** that transforms parsed grammar into working Go parser code
-- Proper operator precedence and associativity handling in the generated parsers
-
-**The bootstrap problem:** I needed a working parser to parse grammars that define how to build parsers. This meant getting the grammar parser right was critical - any bugs would propagate to all generated parsers.
+To generate parsers, I first built a parser that parses grammar files themselves—the classic bootstrap problem. The system reads EBNF grammar specifications, handles all constructs (terminals, non-terminals, operators, grouping), and automatically generates working Go parser code with proper precedence and associativity.
 
 ### 3. **Streamable LL(1) Predictive Parser** (The Heart of This Project)
-**This was the main goal and the most ambitious undertaking of the entire project.** Making a parser that's truly *streamable* - that can incrementally consume tokens and emit parsing events without building the entire AST in memory - required far more planning, design, and research than I ever anticipated.
-
-**Why streamable parsing is hard:**
-- Traditional parsers build complete ASTs before returning anything
-- Streaming means emitting events (start non-terminal, end non-terminal, match terminal) as parsing progresses
-- Requires careful state management with an explicit stack
-- Error recovery must work incrementally without losing position
-- The event stream must be meaningful and usable for building parse trees incrementally
-
-**The research journey:**
-- Spent weeks diving deep into LL(1) parsing theory and predictive parsing algorithms
-- Studied how to implement FIRST and FOLLOW set computation from academic papers
-- Designed an event-based architecture from scratch that others could actually use
-- Figured out how to handle error recovery in a streaming context
-- Built an EBNF to BNF converter because the streaming parser needed pure BNF
-- Tested and refined the streaming behavior to ensure it was actually useful
-
-**Was it worth it?** Absolutely. The streaming parser can parse arbitrarily large inputs with bounded memory, handle incremental parsing scenarios, and emit events that can be processed in real-time. But more importantly, building it taught me more about parsing than any textbook could.
+The main goal: a parser that incrementally consumes tokens and emits parsing events without building the entire AST in memory. This required weeks of research into LL(1) theory, FIRST/FOLLOW set computation from academic papers, and designing an event-based architecture with proper state management and error recovery. The result: a parser that handles arbitrarily large inputs with bounded memory and processes events in real-time.
 
 ### 4. **Streamable Parser Code Generation** (The Ultimate Achievement)
-If building a streamable parser was hard, building a *generator* for streamable parsers was the ultimate synthesis challenge:
-- Had to build a parser for grammar files (the meta-parser mentioned above)
-- Automatically converts EBNF to BNF (non-trivial transformation)
-- Computes FIRST and FOLLOW sets algorithmically (translating theory to code)
-- Generates efficient, table-driven parsing code with embedded parsing tables
-- The generated code must handle streaming, error recovery, and event emission
-- All of this happens automatically from a simple grammar file
+The ultimate synthesis: a system that reads grammar files, automatically converts EBNF to BNF, computes FIRST/FOLLOW sets, and generates complete table-driven LL(1) parsers with streaming, error recovery, and event emission—all from a simple grammar specification. This required combining everything learned about parsing theory, code generation, and streaming architecture design.
 
-**This required synthesizing everything learned about:**
-- Parsing theory (LL(1), FIRST/FOLLOW, grammar transformations)
-- Code generation (templates, AST manipulation, symbol tables)
-- Compiler design (multi-pass processing, intermediate representations)
-- The streaming architecture I spent so long designing
-
-The generator took the longest to get right. Every edge case in grammar handling, every nuance of LL(1) restrictions, every detail of the streaming event protocol had to be encoded into the generator's logic. But when it finally worked - when I could write a grammar file and get a complete, working, streaming parser in return - that was an incredible moment.
-
-### 5. **Performance Engineering**
-Every component is optimized for real-world use:
-- Minimal memory allocations in hot paths
-- Efficient buffer management
-- Reusable data structures
-- Benchmarked and profiled for bottlenecks
-
-### 6. **Comprehensive Documentation & Demos**
+### 5. **Comprehensive Documentation & Demos**
 Because understanding is as important as building:
 - Detailed READMEs explaining theory and implementation
 - Working demo programs for every major component
@@ -115,22 +59,7 @@ These videos provide visual walkthroughs of the core components and are a great 
 
 ## The Research Behind It
 
-This project required extensive research across multiple domains:
-- **Automata Theory**: DFA construction, state minimization, conflict resolution
-- **Parsing Theory**: LL(1) grammars, recursive descent, predictive parsing, FIRST/FOLLOW sets
-- **Grammar Design**: EBNF notation, left recursion elimination, left factoring, grammar transformations
-- **Code Generation**: AST construction, symbol table management, template-based generation, meta-programming
-- **Language Implementation**: Operator precedence, error recovery, streaming architectures
-- **Streaming Parser Design**: Event-based architectures, incremental parsing, bounded memory consumption, state management
-
-The streaming parser alone required:
-- Reading multiple academic papers on LL(1) parsing algorithms
-- Studying existing streaming XML parsers (SAX) for event design patterns
-- Experimenting with different stack representations and event protocols
-- Weeks of planning how to make the streaming behavior actually useful
-- Extensive testing with different grammar patterns to find edge cases
-
-Each feature represents countless hours of reading, planning, implementing, debugging, and refining. The streamable parser generator was particularly intense - it's one thing to understand how parsers work, but quite another to build a system that automatically generates them with all the correct streaming behavior, error recovery, and event emission.
+Building this required deep dives into automata theory (DFA construction, conflict resolution), parsing theory (LL(1), FIRST/FOLLOW sets), grammar design (EBNF, left factoring), code generation (AST manipulation, templates), and streaming architecture design (event-based systems, incremental parsing). The streaming parser particularly required studying academic papers on LL(1) algorithms and existing streaming parsers (SAX) for event design patterns.
 
 ## Architecture
 
@@ -202,7 +131,7 @@ go mod download
 
 ### Running Demos
 
-**⚠️ Important for Parser Generation Demos:**
+**Important for Parser Generation Demos:**
 
 Parser generation requires **TWO separate runs** because Go compiles at build-time:
 1. **First run:** Generates the parser code (writes `generated_parser.go`)
@@ -232,20 +161,20 @@ go test ./streamable_parser/...
 
 ## Current Status
 
-✅ **Completed (After Extensive Research & Development):**
-- ✨ **Hand-crafted DFA-based lexical analyzer** - Built from scratch with custom state machines
-- ✨ **Recursive descent parser generator** - Reads grammars, generates working parsers
-- ✨ **LL(1) predictive parser** - Complete implementation with FIRST/FOLLOW computation
-- ✨ **Predictive parser code generator** - The ultimate achievement: generates entire LL(1) parsers from grammar specs
-- ✨ **EBNF to BNF converter** - Automatic grammar transformation
-- ✨ **Error handling framework** - Stack traces and error propagation
-- ✨ **Comprehensive test suites** - Ensuring correctness at every level
-- ✨ **Extensive documentation** - Because understanding matters
+**Completed (After Extensive Research & Development):**
+- **Hand-crafted DFA-based lexical analyzer** - Built from scratch with custom state machines
+- **Recursive descent parser generator** - Reads grammars, generates working parsers
+- **LL(1) predictive parser** - Complete implementation with FIRST/FOLLOW computation
+- **Predictive parser code generator** - The ultimate achievement: generates entire LL(1) parsers from grammar specs
+- **EBNF to BNF converter** - Automatic grammar transformation
+- **Error handling framework** - Stack traces and error propagation
+- **Comprehensive test suites** - Ensuring correctness at every level
+- **Extensive documentation** - Because understanding matters
 
-🚧 **In Progress:**
+**In Progress:**
 - None currently (this represents the culmination of the learning journey so far)
 
-📋 **Future Work:**
+**Future Work:**
 - AST interpreter/evaluator
 - Semantic analysis
 - Runtime environment
@@ -260,7 +189,7 @@ go test ./streamable_parser/...
 
 **Parser Generation**: Code generation happens at build-time in Go. You cannot generate and use parser code in the same execution - you must run your program twice (once to generate, once to use).
 
-**Edge Cases**: While extensively tested, not all possible edge cases are covered. Use with appropriate care in production environments.
+**Edge Cases**: While extensively tested, not all possible edge cases are covered. Use with appropriate care.
 
 ## Design Philosophy
 
@@ -275,48 +204,9 @@ This project prioritizes:
 
 **Because the best way to learn something is to build it yourself.**
 
-Using existing parser generators like YACC or ANTLR is fine for production work, but you don't truly understand parsing theory until you've:
-- Debugged why a grammar is ambiguous
-- Implemented FIRST/FOLLOW set computation by hand
-- Watched your DFAs accept and reject tokens
-- Generated working code from grammar specifications
-- Dealt with left recursion and left factoring issues
-- Designed a streaming architecture that actually works
-- Built a parser to parse the grammars that define how to build parsers
+You don't truly understand parsing until you've debugged ambiguous grammars, implemented FIRST/FOLLOW computation by hand, watched your DFAs work, and built parsers that generate parsers. The streaming architecture was particularly challenging—handling massive inputs efficiently with bounded memory required weeks of additional research, but taught me more than any textbook could.
 
-**The main challenge: Making it streamable.** I initially thought "I'll build a parser" but quickly realized I wanted something more ambitious - a parser that could handle massive inputs efficiently, emit events incrementally, and not require loading entire parse trees into memory. This single design goal drove weeks of additional research and implementation. Was it harder than I expected? Absolutely. Did I learn exponentially more because of it? Without question.
-
-This project is proof that with curiosity, persistence, and a lot of research, you can build complex systems from first principles. Every bug fixed taught me something. Every feature implemented deepened my understanding. Every design decision for the streaming architecture revealed new insights into how parsers work. The streaming parser, in particular, required a level of planning and forethought I hadn't anticipated - but solving those challenges was incredibly rewarding.
-
-**If you're learning about compilers, I encourage you to build something like this too.** Pick a challenging goal (like streaming), commit to understanding it deeply, and iterate until it works. The journey is just as valuable as the destination.
-
-## Future Improvements
-
-### Lexer
-
-1. **DFA Optimization**
-   - Trie-based approach for exact keyword matching would be faster
-   - Token grouping by character class (digits, letters, operators) before DFA dispatch
-   
-2. **Scanner Efficiency**
-   - Skip DFAs that return INVALID from subsequent token processing
-   - Fix the "twice processing" issue where first rune of each token is processed twice
-
-### Parser
-
-1. **Error Recovery**
-   - Better error messages with suggestions
-   - Panic mode recovery for syntax errors
-   
-2. **Performance**
-   - Memoization for parser combinators
-   - Lazy evaluation strategies
-
-### General
-
-1. **Regex-based DFA Generation**
-   - Automatically generate DFAs from regex patterns
-   - Would make token definitions much more flexible
+This project proves that with curiosity and persistence, you can build complex systems from first principles. If you're learning about compilers, pick a challenging goal, commit to understanding it deeply, and iterate until it works.
 
 ## What I Learned
 
@@ -350,4 +240,4 @@ Bug reports and suggestions are always appreciated. The code is designed to be r
 
 ---
 
-Happy parsing! 🚀
+Happy parsing!
