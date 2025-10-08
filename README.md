@@ -34,22 +34,22 @@ Want to see how this all works? Watch these video demonstrations directly below:
 ### 📹 **DFA-Based Tokenization in Action**
 Watch how deterministic finite automata process input character-by-character, see state transitions and token recognition in real-time, and understand how maximal munching and conflict resolution work.
 
-[![DFA Demo](https://img.youtube.com/vi/Jk11VfPGP24/0.jpg)](https://youtu.be/Jk11VfPGP24)
+https://github.com/user-attachments/assets/7f7eb54f-99d0-4084-b4f2-6780faacab75
 
 ### 📹 **Complete Lexical Analysis**
 Full demonstration of the lexer converting source code to tokens. See how keywords, operators, literals, and identifiers are recognized, and follow tokens through the scanning pipeline.
 
-[![Scanner Demo](https://img.youtube.com/vi/eF7EvJ2F83M/0.jpg)](https://youtu.be/eF7EvJ2F83M)
+https://github.com/user-attachments/assets/8632bedd-0319-45d1-ba3b-f82dc8cbd4d1
 
 ### 📹 **Automatic Parser Generation**
 Watch the parser generator read a grammar file and produce working parser code. See EBNF to BNF conversion, FIRST/FOLLOW set computation in action, and observe complete LL(1) parser generation from start to finish.
 
-[![Parser Generation Demo](https://img.youtube.com/vi/eWw7xxXMJqU/0.jpg)](https://youtu.be/eWw7xxXMJqU)
+https://github.com/user-attachments/assets/c31e535f-5e9c-415b-bd2a-7db2d6a6ac71
 
 ### 📹 **Streaming Parser in Action**
 See the generated LL(1) parser process expressions incrementally. Watch event-based parsing with start/end/leaf emissions and follow the parse tree construction in real-time.
 
-[![Streaming Parser Demo](https://img.youtube.com/vi/56iijs92IOA/0.jpg)](https://youtu.be/56iijs92IOA)
+https://github.com/user-attachments/assets/a07adc44-9df2-4765-a5c6-5829830e2e67
 
 ## The Research Behind It
 
