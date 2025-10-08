@@ -35,7 +35,7 @@ Want to see how this all works? Watch these video demonstrations directly below:
 Watch how deterministic finite automata process input character-by-character, see state transitions and token recognition in real-time, and understand how maximal munching and conflict resolution work.
 
 <video width="100%" controls>
-  <source src="dfa-demo.mp4" type="video/mp4">
+  <source src="https://youtu.be/Jk11VfPGP24" type="video/mp4">
   Your browser does not support the video tag. <a href="dfa-demo.mp4">Download the video</a>
 </video>
 
@@ -43,7 +43,7 @@ Watch how deterministic finite automata process input character-by-character, se
 Full demonstration of the lexer converting source code to tokens. See how keywords, operators, literals, and identifiers are recognized, and follow tokens through the scanning pipeline.
 
 <video width="100%" controls>
-  <source src="scanner-demo.mp4" type="video/mp4">
+  <source src="https://youtu.be/eF7EvJ2F83M" type="video/mp4">
   Your browser does not support the video tag. <a href="scanner-demo.mp4">Download the video</a>
 </video>
 
@@ -51,7 +51,7 @@ Full demonstration of the lexer converting source code to tokens. See how keywor
 Watch the parser generator read a grammar file and produce working parser code. See EBNF to BNF conversion, FIRST/FOLLOW set computation in action, and observe complete LL(1) parser generation from start to finish.
 
 <video width="100%" controls>
-  <source src="streamable_parser%20code%20generation%20demo.mp4" type="video/mp4">
+  <source src="https://youtu.be/eWw7xxXMJqU" type="video/mp4">
   Your browser does not support the video tag. <a href="streamable_parser%20code%20generation%20demo.mp4">Download the video</a>
 </video>
 
@@ -59,7 +59,7 @@ Watch the parser generator read a grammar file and produce working parser code. 
 See the generated LL(1) parser process expressions incrementally. Watch event-based parsing with start/end/leaf emissions and follow the parse tree construction in real-time.
 
 <video width="100%" controls>
-  <source src="streamable_parser%20parsing%20demo.mp4" type="video/mp4">
+  <source src="https://youtu.be/56iijs92IOA" type="video/mp4">
   Your browser does not support the video tag. <a href="streamable_parser%20parsing%20demo.mp4">Download the video</a>
 </video>
 
