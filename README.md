@@ -29,33 +29,27 @@ Because understanding is as important as building:
 
 ## Demo Videos - See It In Action! 
 
-Want to see how this all works? Check out these video demonstrations:
+Want to see how this all works? Watch these video demonstrations directly below:
 
-### 📹 **[dfa-demo.mp4](dfa-demo.mp4)**
-**DFA-Based Tokenization in Action**
-- Watch how deterministic finite automata process input character-by-character
-- See state transitions and token recognition in real-time
-- Understand how maximal munching and conflict resolution work
+### 📹 **DFA-Based Tokenization in Action**
+Watch how deterministic finite automata process input character-by-character, see state transitions and token recognition in real-time, and understand how maximal munching and conflict resolution work.
 
-### 📹 **[scanner-demo.mp4](scanner-demo.mp4)**
-**Complete Lexical Analysis**
-- Full demonstration of the lexer converting source code to tokens
-- See how keywords, operators, literals, and identifiers are recognized
-- Follow tokens through the scanning pipeline
+https://github.com/user-attachments/assets/7f7eb54f-99d0-4084-b4f2-6780faacab75
 
-### 📹 **[streamable_parser code generation demo.mp4](streamable_parser%20code%20generation%20demo.mp4)**
-**Automatic Parser Generation**
-- Watch the parser generator read a grammar file and produce working parser code
-- See EBNF to BNF conversion, FIRST/FOLLOW set computation in action
-- Observe complete LL(1) parser generation from start to finish
+### 📹 **Complete Lexical Analysis**
+Full demonstration of the lexer converting source code to tokens. See how keywords, operators, literals, and identifiers are recognized, and follow tokens through the scanning pipeline.
 
-### 📹 **[streamable_parser parsing demo.mp4](streamable_parser%20parsing%20demo.mp4)**
-**Streaming Parser in Action**
-- See the generated LL(1) parser process expressions incrementally
-- Watch event-based parsing with start/end/leaf emissions
-- Follow the parse tree construction in real-time
+https://github.com/user-attachments/assets/8632bedd-0319-45d1-ba3b-f82dc8cbd4d1
 
-These videos provide visual walkthroughs of the core components and are a great way to quickly understand what this project does!
+### 📹 **Automatic Parser Generation**
+Watch the parser generator read a grammar file and produce working parser code. See EBNF to BNF conversion, FIRST/FOLLOW set computation in action, and observe complete LL(1) parser generation from start to finish.
+
+https://github.com/user-attachments/assets/c31e535f-5e9c-415b-bd2a-7db2d6a6ac71
+
+### 📹 **Streaming Parser in Action**
+See the generated LL(1) parser process expressions incrementally. Watch event-based parsing with start/end/leaf emissions and follow the parse tree construction in real-time.
+
+https://github.com/user-attachments/assets/a07adc44-9df2-4765-a5c6-5829830e2e67
 
 ## The Research Behind It
 
